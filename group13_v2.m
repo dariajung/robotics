@@ -1,177 +1,193 @@
 function group13_v2(serPort)
 
     % Initialize variables keeping track of distance travelled by roomba
-	init_distance = 0;
+	% init_distance = 0;
     total_distance = 0;                                 
     total_x = 0;
     total_y = 0;
     total_angle = 0;
 
-    margin_error = 0.06;
-
-
-	% states
-	INIT = 0;
-	DRIVING = 1;
-	TURNING = 2; 
-    state = INIT;
-
-    driveAngle = 2;
-    moveDir = 1; % counter clockwise
-    tStart = tic;
-    tInterval = 0.5;
-    bumpDistError = 0.05;
-    bumpCounter = 0;
-    lastBumpDist = 0;
+    margin_error = power(0.33,2);
+    
+    %tStart = tic;
+    %tInterval = 0.5;
+    %bumpDistError = 0.05;
+    %bumpCounter = 0;
+    %lastBumpDist = 0;
 
     fwdVelocity = 0.1;
-    wallVelocity = 0.3;
+    wallVelocity = 0.2;
     turnVelocity = 0.1;
+    
+    
     
     % make roomba hit the wall
     function init()
-        fin = 0;
-        while (~fin)
-            [ BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort); % Read Bumpers, call ones at beginning, resets timers
-            WallSensor = WallSensorReadRoomba(serPort);      % Read Wall Sensor, Requires WallsSensorReadRoomba file
-                
-            display(WallSensor)
-            
-            if (BumpFront || BumpRight || BumpLeft)
-                fin = 1;
-                DistanceSensorRoomba(serPort); % Get the Initial Distance when bumping into the wall
-                disp(['initial_distance: ' num2str(init_distance)]);
-            end
-            
-            % display(BumpFront)
-            % display(BumpRight)
-            % display(BumpLeft)
+        
+		% Read Bumpers, call once at beginning, resets timers
+        BumpsWheelDropsSensorsRoomba(serPort);
+        WallSensorReadRoomba(serPort);      % Read Wall Sensor, Requires WallsSensorReadRoomba file
 
+		SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);       % Move Forward
+        
+        while 1
+            [ BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+            disp([BumpLeft BumpFront BumpRight]);
+            WallSensor = WallSensorReadRoomba(serPort);
+            
             if (BumpRight)
                 SetFwdVelRadiusRoomba(serPort, 0, inf); % stop robot
                 turnAngle(serPort, turnVelocity, 45);
-                % fin = 1;
-                moveDir = -1;
+                return
             elseif (BumpLeft)
                 SetFwdVelRadiusRoomba(serPort, 0, inf); % stop robot
                 turnAngle(serPort, turnVelocity, -45);
-                % fin = 1;
-                moveDir = 1;
+                return
             elseif (BumpFront)
                 SetFwdVelRadiusRoomba(serPort, 0, inf); % stop robot
                 turnAngle(serPort, turnVelocity, 90);
-                % fin = 1;
-                moveDir = -1;
-            else
-                SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);       % Move Forward
-                % Total_Distance = Total_Distance + DistanceSensorRoomba(serPort);    % Update the Total_Distance covered so far
-                % recordRobotTravel(serPort);
-                % display(Total_Distance)
+                return
+            elseif (WallSensor)
+                return
             end
-            pause(0.1);
+            pause(0.1); % update simulator screen
         end
     end
 
-    function bumpAction(serPort, BumpRight, BumpLeft, BumpFront)
-        if (BumpRight)
-            %state = 'right';
-            SetFwdVelRadiusRoomba(serPort, 0, inf);
+	function [d,a] = bumpAction(serPort, b_right, b_left, b_front)
+		% stop roomba
+        SetFwdVelRadiusRoomba(serPort, 0, inf);
+        if (b_right)
             turnAngle(serPort, turnVelocity, 10);
-            moveDir = -1;
-        elseif (BumpLeft)
-            %state = 'left';
-            SetFwdVelRadiusRoomba(serPort, 0, inf);
+            a = 0.174;
+        elseif (b_left)
             turnAngle(serPort, turnVelocity, -10);
-            moveDir = 1;
-        elseif (BumpFront)
-            %state = 'front';
-            SetFwdVelRadiusRoomba(serPort, 0, inf);
+            a = -0.174;
+        elseif (b_front)
             turnAngle(serPort, turnVelocity, 10);
-            moveDir = -1;
+            a = 0.174;
         end
-    end
+		% move forward a bit after turning
+        travelDist(serPort, fwdVelocity, 0.03);
+        d = 0.03;
+        %SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);
+	end
 
     % record robot's distance traveled from last bump
-    function recordRobotTravel(serPort) 
+	function recordRobotTravel(serPort, dD, dA) 
+        %total_angle = total_angle + (AngleSensorRoomba(serPort)+dA)/2;
         total_angle = total_angle + AngleSensorRoomba(serPort);
+        %distance = (DistanceSensorRoomba(serPort)+dD)/2;
         distance = DistanceSensorRoomba(serPort);
         total_distance = total_distance + distance;
         total_x = total_x + distance * cos(total_angle);
         total_y = total_y + distance * sin(total_angle);
 
-        display(total_angle)
-        display(total_distance)
-        display(total_x)
-        display(total_y)
-    end
+		disp(['a:',num2str(180 * total_angle/pi),...
+            ' d:',num2str(total_distance),...
+            ' x:',num2str(total_x),' y:',num2str(total_y)]);
+	end
 
     init();
 
-	% reset sensors
+	% hit wall, reset sensors to start measuring change
     DistanceSensorRoomba(serPort);
     AngleSensorRoomba(serPort);
-    state = INIT;
 
-    display('------------->       out of init')
+    display('-------------------------------------->       out of init')
     
-    while 1
-
-		recordRobotTravel(serPort); % update distance traveled
-
-		if power(total_x, 2) + power(total_y, 2) <= power(margin_error, 2) % what about in the beginning? always in this radius!!!
-			if (state == DRIVING)
-				break
-			end
-		else
-			if (state == INIT)
-				state = DRIVING;
-				display('-------------> first time out of margin');
-			end
-		end
-        
-		[ BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort); % Read Bumpers, call ones at beginning, resets timers
-        WallSensor = WallSensorReadRoomba(serPort);      % Read Wall Sensor, Requires WallsSensorReadRoomba file
+    % states
+	INIT = 0;
+	DRIVING = 1;
+	%TURNING = 2; 
+	state = INIT;
+	while 1
+		[ BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+        WallSensor = WallSensorReadRoomba(serPort);
         % disp([BumpLeft,BumpRight,BumpFront]);
-        % display(WallSensor)                          % Display WallSensor Value
+        % display(WallSensor)
 
-        bumped = BumpRight || BumpLeft || BumpFront;
+        deltaD = 0;
+        deltaA = 0;
+        if (BumpRight || BumpLeft || BumpFront)
+            %[deltaD, deltaA] = bumpAction(serPort, BumpRight, BumpLeft, BumpFront);
+           
+            SetFwdVelRadiusRoomba(serPort, 0, inf); % stop roomba
 
-        if (bumped)
-            if bumpCounter >= 5
-                bumpCounter = 0;
-                if (total_distance - lastBumpDist) <= bumpDistError
-                    turnAngle(serPort, turnVelocity, 45);
-                    display('stuck here!')
+            % try undo bump sensor
+            rotCount = 0;
+            dir = 1;
+            while (BumpRight || BumpLeft || BumpFront)
+                rotCount = rotCount + 1;
+                
+                if (BumpRight)
+                    turnAngle(serPort, turnVelocity, 10);
+                    dir = 1;
+                elseif (BumpLeft)
+                    turnAngle(serPort, turnVelocity, -10);
+                    dir = -1;
+                elseif (BumpFront)
+                    turnAngle(serPort, turnVelocity, 10);
+                    dir = 1;
                 end
-
-                lastBumpDist = total_distance;
-            else
-                bumpCounter = bumpCounter + 1;
-                bumpAction(serPort, BumpRight, BumpLeft, BumpFront);    
-
-                % lastBumpDist = lastBumpDist + DistanceSensorRoomba(serPort)
+            
+                [ BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+                
+                pause(0.1);
+                display('............TRYING TO ROTATE AWAY...........');
             end
-            % bumpAction(serPort, BumpRight, BumpLeft, BumpFront);    
+            % move forward a bit after turning
+            travelDist(serPort, fwdVelocity, 0.03);
+            deltaD = 0.03;
+            deltaA = rotCount * pi * 10/180 * dir;
+            display('............LEFT WALL!!!...........');
+
         elseif (WallSensor)
             % Move Forward
-            % Total_Distance = Total_Distance + DistanceSensorRoomba(serPort);
             SetFwdVelRadiusRoomba(serPort, wallVelocity, inf);
-        else
-            % Total_Distance = Total_Distance + DistanceSensorRoomba(serPort);
-            if (toc(tStart) >= tInterval)
-                SetFwdVelRadiusRoomba(serPort, 0, inf); % stop roomba
-                    % turnAngle(serPort, turnVelocity, 10 * moveDir);
-                turnAngle(serPort, turnVelocity, 20 * -1);
-                    % SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);
-                tStart = tic;
+            deltaD = wallVelocity * 0.1;
+        else % no bump and no wall sensor, went off wall!
+            
+            SetFwdVelRadiusRoomba(serPort, 0, inf); % stop roomba
+            
+            % try to find the wall
+            rot = -10;
+            rotMult = 1;
+            while (~(WallSensor || BumpRight || BumpLeft || BumpFront))
+                turnAngle(serPort, turnVelocity, rot * rotMult);
+                travelDist(serPort, fwdVelocity, 0.03);
+            
+                [ BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+                WallSensor = WallSensorReadRoomba(serPort);
+                
+                pause(0.1);
+                display('............TRYING TO FIND WALL...........');
+                rotMult = rotMult + 1;
             end
-            SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);
+            display('............FOUND WALL!!!...........');
+            % check???
+            deltaD = rotMult * 0.03;
+            deltaA = rotMult * pi * -10/180;
+            
         end
+        
         pause(0.1);
-    end
+        
+        
+        recordRobotTravel(serPort, deltaD, deltaA); % update distance traveled
+        totalOffset = power(total_x, 2) + power(total_y, 2);
+        display(['totaloff: ',num2str(totalOffset)]);
+        if (totalOffset <= margin_error)
+            if (state == DRIVING)
+                break
+            end
+        elseif (state == INIT)
+            state = DRIVING;
+            display('-----------------------------> first time out of margin');
+        end
+
+	end
 
 	display('back to start!');    
     SetFwdVelRadiusRoomba(serPort, 0, 2); % Stop the Robot
-%==========================================================================
-
 end
