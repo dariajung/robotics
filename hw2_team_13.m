@@ -74,7 +74,8 @@ function hw2_team_13(serPort, goalDistance)
 			stopRobot();
 			delta_x = followWall(serPort,BumpRight, BumpLeft, BumpFront);
 				
-			total_x = total_x + delta_x;
+            break
+			%total_x = total_x + delta_x;
 			
 		else % no bump, keep going straight
 			

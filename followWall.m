@@ -12,9 +12,26 @@
 % Daria Jung (djj2115)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+% TODO:
+% if hits m line and x is negative, keep following
+%     if reaches 0 again its inside a closed obstacle, exit report stuck
+%         
+% keep going straight after reorient
+
+
+        
+
+
+
+
 % main function 
 function [delta_x] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
 
+	% TODO: reset? sensors to start measuring change
+	DistanceSensorRoomba(serPort);
+	AngleSensorRoomba(serPort);
+    
 	fwdVelocity = 0.1;
 	wallVelocity = 0.2;
 	turnVelocity = 0.1;
@@ -27,7 +44,7 @@ function [delta_x] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
 	total_distance = 0;
 	
 	% margin of error for sensor reading for stop position
-	margin_error = power(0.1, 2);
+	margin_error = power(0.25, 2);
 	
     if (BumpRight)
         turnAngle(serPort, turnVelocity, 45);
@@ -38,7 +55,7 @@ function [delta_x] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
         turnAngle(serPort, turnVelocity, 90);   
     end
 				
-
+    recordAngleTurn(serPort);
 
     % Robot turns and re-orients itself depending on bump sensor reading
     function bumpAction(serPort, BumpRight, BumpLeft, BumpFront)
@@ -92,17 +109,20 @@ function [delta_x] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
 
 	function [onM] = on_m_line()
 		
-        onM = 0;
-		
+        display(delta_y);
+        
+        if (abs(delta_y) <= margin_error)
+            onM = 1;
+        else
+            onM = 0;
+        end
 	end
 
 	function stopRobot()
 		SetFwdVelRadiusRoomba(serPort, 0, inf); % Stop the Robot
 	end
 
-	% TODO: reset? sensors to start measuring change
-	DistanceSensorRoomba(serPort);
-	AngleSensorRoomba(serPort);
+
 
 	% states
 	INIT = 0;
@@ -144,6 +164,12 @@ function [delta_x] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
 		recordRobotTravel(serPort); % update distance traveled
         if ((state == DRIVING) && (on_m_line()))
             % robot returned to origin (offset close to 0)
+            
+            angleDegrees = -180 * total_angle/pi;
+            turnAngle(serPort, turnVelocity, angleDegrees);
+            
+            pause(0.1);
+            
             break
         elseif ((state == INIT) && (total_offset > margin_error))
             state = DRIVING;
@@ -151,7 +177,7 @@ function [delta_x] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
         end
 	end
 
-	display('Robot returned back to start!');    
+	display('Robot returned to M line!');    
 	stopRobot();
 end
 
