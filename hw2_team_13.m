@@ -15,7 +15,7 @@
 % main function 
 function hw2_team_13(serPort, goalDistance)
 
-    goalDistance = 2;
+    goalDistance = 1;
     
     
 
@@ -31,10 +31,11 @@ function hw2_team_13(serPort, goalDistance)
 	total_offset = 0;
 	
 	% margin of error for sensor reading for stop position
-	margin_error = power(0.1, 2);
+	margin_error = power(0.4, 2);
 
 	wallVelocity = 0.2;
-
+    turnVelocity = 0.1;
+    
     function recordAngleTurn(serPort)
 		total_angle = total_angle + AngleSensorRoomba(serPort);
 	end
@@ -64,27 +65,45 @@ function hw2_team_13(serPort, goalDistance)
 	AngleSensorRoomba(serPort);
 	
     % STARTING ROBOT
-	SetFwdVelRadiusRoomba(serPort, wallVelocity, inf); % Move Forward
-		
+ 	SetFwdVelRadiusRoomba(serPort, wallVelocity, inf); % Move Forward
+	%travelDist(serPort, 0.3, 4);
 	while 1
 		[BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
 
 		if (BumpRight || BumpLeft || BumpFront)
 			
 			stopRobot();
-			delta_x = followWall(serPort,BumpRight, BumpLeft, BumpFront);
+			[delta_x, theta] = followWall(serPort,BumpRight, BumpLeft, BumpFront);
 				
-            break
-			%total_x = total_x + delta_x;
+            display(delta_x);
+
+			total_x = total_x + delta_x;
+            total_angle = total_angle + theta;
+            
+            if (abs(delta_x) < 0.1)
+                display('robot is stuck inside');
+                break
+            elseif (total_x > goalDistance)
+               
+               turnAngle(serPort, turnVelocity, 180 - theta);
+               %display('------------------------------------->finished turnAngle after wall follow');
+               %AngleSensorRoomba(serPort); % reset angle sensor to 0
+            else
+                turnAngle(serPort, turnVelocity, -theta);
+            end
+            recordAngleTurn(serPort);
 			
 		else % no bump, keep going straight
 			
+            display('------------------------------------->going straight');
+            recordRobotTravel(serPort); % update distance traveled
 			SetFwdVelRadiusRoomba(serPort, wallVelocity, inf);
-			recordRobotTravel(serPort); % update distance traveled
+			
 
 		end
 		
-		pause(0.1);
+
+ 		pause(0.1);
 
 		if (abs(goalDistance - total_x) <= margin_error)
 			% robot reached goal!

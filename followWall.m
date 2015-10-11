@@ -14,10 +14,13 @@
 
 
 % TODO:
-% if hits m line and x is negative, keep following
+% 
 %     if reaches 0 again its inside a closed obstacle, exit report stuck
 %         
-% keep going straight after reorient
+% robot simulator keeps curving up, how to reorient back down if no
+% obstacles?
+% if goal is inside obstacle?
+% instead of if theta > 0 theta or small number
 
 
         
@@ -26,7 +29,7 @@
 
 
 % main function 
-function [delta_x] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
+function [delta_x, total_angle] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
 
 	% TODO: reset? sensors to start measuring change
 	DistanceSensorRoomba(serPort);
@@ -165,12 +168,17 @@ function [delta_x] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
         if ((state == DRIVING) && (on_m_line()))
             % robot returned to origin (offset close to 0)
             
-            angleDegrees = -180 * total_angle/pi;
-            turnAngle(serPort, turnVelocity, angleDegrees);
+            
+            if delta_x > 0 % robot moved towards goal
+                %angleDegrees = -180 * total_angle/pi;
+                %turnAngle(serPort, turnVelocity, angleDegrees);
+                %AngleSensorRoomba(serPort); % reset angle sensor to 0
+                break
+            end
             
             pause(0.1);
             
-            break
+            
         elseif ((state == INIT) && (total_offset > margin_error))
             state = DRIVING;
             display('-----------------------------> first time out of margin');
