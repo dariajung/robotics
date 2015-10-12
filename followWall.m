@@ -168,6 +168,9 @@ function [delta_x, total_angle] = followWall(serPort, BumpRight, BumpLeft, BumpF
         if ((state == DRIVING) && (on_m_line()))
             % robot returned to origin (offset close to 0)
             
+            if (abs(delta_x) < 0.1) 
+                break
+            end
             
             if delta_x > 0 % robot moved towards goal
                 %angleDegrees = -180 * total_angle/pi;
