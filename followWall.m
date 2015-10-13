@@ -29,8 +29,11 @@
 
 
 % main function 
-function [delta_x, total_angle] = followWall(serPort, BumpRight, BumpLeft, BumpFront)
+function [delta_x, total_angle] = followWall(serPort,...
+    BumpRight, BumpLeft, BumpFront, oX,oY, fig, drawInterval)
 
+    dStart = tic;
+    
 	% TODO: reset? sensors to start measuring change
 	DistanceSensorRoomba(serPort);
 	AngleSensorRoomba(serPort);
@@ -136,7 +139,7 @@ function [delta_x, total_angle] = followWall(serPort, BumpRight, BumpLeft, BumpF
 		WallSensor = WallSensorReadRoomba(serPort);
 		display(WallSensor)
 
-		if (BumpRight || BumpLeft || BumpFront)
+        if (BumpRight || BumpLeft || BumpFront)
 			bumpAction(serPort, BumpRight, BumpLeft, BumpFront);
 
 		elseif (WallSensor)
@@ -155,13 +158,25 @@ function [delta_x, total_angle] = followWall(serPort, BumpRight, BumpLeft, BumpF
 				[BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
 				WallSensor = WallSensorReadRoomba(serPort);
 				
+                dElapsed = toc(dStart);
+                if (dElapsed > drawInterval)
+                    mapRobot(fig, oX + delta_x, oY + delta_y, total_angle);
+                    dStart = tic;
+                end
+        
 				pause(0.1);
 				display('............TRYING TO FIND WALL...........');
 			end
 			display('............FOUND WALL!!!...........');
 			
-		end
+        end
 		
+        dElapsed = toc(dStart);
+        if (dElapsed > drawInterval)
+            mapRobot(fig, oX + delta_x, oY + delta_y, total_angle);
+            dStart = tic;
+        end
+        
 		pause(0.1);
 		
 		recordRobotTravel(serPort); % update distance traveled

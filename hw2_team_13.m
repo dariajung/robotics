@@ -15,8 +15,13 @@
 % main function 
 function hw2_team_13(serPort, goalDistance)
     
+    fig1 = figure('Name','robot path'); % draw robot path
+    axes('XLim', [-2 8], 'YLim', [-5 5]);
+    drawInterval = 0.5; % draw every 0.5 seconds
+    dStart = tic;
+
     hitPoints = [];
-	goalDistance = 1.5;
+	goalDistance = 4;
 	goalAngle = 0;
 	
 	% Read Bumpers, call ONCE at beginning, resets readings
@@ -66,7 +71,7 @@ function hw2_team_13(serPort, goalDistance)
 	
 	% STARTING ROBOT
 	SetFwdVelRadiusRoomba(serPort, wallVelocity, inf); % Move Forward
-	%travelDist(serPort, 0.3, 4);
+
 	while 1
 		[BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
 
@@ -74,7 +79,7 @@ function hw2_team_13(serPort, goalDistance)
 			
 			stopRobot();
             hitPoints = [hitPoints, total_x];
-			[delta_x, theta] = followWall(serPort,BumpRight, BumpLeft, BumpFront);
+			[delta_x, theta] = followWall(serPort,BumpRight, BumpLeft, BumpFront, total_x, total_y, fig1, drawInterval);
 		            
 			display(delta_x)
 			display(theta)
@@ -117,8 +122,13 @@ function hw2_team_13(serPort, goalDistance)
 			SetFwdVelRadiusRoomba(serPort, wallVelocity, inf);
 			
 
-		end
+        end
 		
+        dElapsed = toc(dStart);
+        if (dElapsed > drawInterval)
+            mapRobot(fig1, total_x, total_y, total_angle);
+            dStart = tic;
+        end
 
 		pause(0.1);
 
