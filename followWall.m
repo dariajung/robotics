@@ -23,14 +23,11 @@
 % instead of if theta > 0 theta or small number
 
 
-        
-
-
-
-
 % main function 
 function [delta_x, total_angle] = followWall(serPort,...
     BumpRight, BumpLeft, BumpFront, oX,oY, fig, drawInterval)
+    %BumpRight, BumpLeft, BumpFront, oX,oY, drawInterval)
+
 
     dStart = tic;
     
@@ -87,7 +84,6 @@ function [delta_x, total_angle] = followWall(serPort,...
         end
         % move forward a bit after turning
         travelDist(serPort, fwdVelocity, 0.05);
-
         display('............LEFT WALL!!!...........');
 
     end
@@ -100,8 +96,8 @@ function [delta_x, total_angle] = followWall(serPort,...
 	function recordRobotTravel(serPort) 
 		recordAngleTurn(serPort);
 		
-		distance = DistanceSensorRoomba(serPort) * .97;
-		total_distance = total_distance + distance;
+		distance = DistanceSensorRoomba(serPort);
+		total_distance = total_distance + distance * 0.97;
 		delta_x = delta_x + distance * cos(total_angle);
 		delta_y = delta_y + distance * sin(total_angle);
 
@@ -153,6 +149,7 @@ function [delta_x, total_angle] = followWall(serPort,...
 			while (~(WallSensor || BumpRight || BumpLeft || BumpFront))
 				turnAngle(serPort, turnVelocity, -15); % turn right towards wall
 				travelDist(serPort, 0.05, 0.03);
+                
 				recordRobotTravel(serPort); % update distance traveled
 			
 				[BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);

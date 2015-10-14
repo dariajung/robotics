@@ -14,15 +14,16 @@
 
 % main function 
 function hw2_team_13(serPort, goalDistance)
-    
-    fig1 = figure('Name','robot path'); % draw robot path
-    axes('XLim', [-2 8], 'YLim', [-5 5]);
-    drawInterval = 0.5; % draw every 0.5 seconds
-    dStart = tic;
+	
+	fig1 = figure('Name','robot path'); % draw robot path
+	axes('XLim', [-2 8], 'YLim', [-5 5]);
+	drawInterval = 0.5; % draw every 0.5 seconds
+	dStart = tic;
 
-    hitPoints = [];
-	goalDistance = 4;
+	hitPoints = [];
+	goalDistance = 2;
 	goalAngle = 0;
+	overShoot = 1;	
 	
 	% Read Bumpers, call ONCE at beginning, resets readings
 	BumpsWheelDropsSensorsRoomba(serPort);
@@ -48,8 +49,8 @@ function hw2_team_13(serPort, goalDistance)
 	function recordRobotTravel(serPort) 
 		recordAngleTurn(serPort);
 		
-		distance = DistanceSensorRoomba(serPort) * .97;
-		total_distance = total_distance + distance;
+		distance = DistanceSensorRoomba(serPort);
+		total_distance = total_distance + distance * .97;
 		total_x = total_x + distance * cos(total_angle);
 		total_y = total_y + distance * sin(total_angle);
 
@@ -74,43 +75,62 @@ function hw2_team_13(serPort, goalDistance)
 
 	while 1
 		[BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+		display('While loop total_x')
+		display(total_x)
+		
+		recordRobotTravel(serPort); % update distance traveled
+		display('------------------------------------->TOTAL_X GOING STRAIGHT');
+		display(total_x)
 
+		
 		if (BumpRight || BumpLeft || BumpFront)
 			
 			stopRobot();
-            hitPoints = [hitPoints, total_x];
+			
+			hitPoints = [hitPoints, total_x];
 			[delta_x, theta] = followWall(serPort,BumpRight, BumpLeft, BumpFront, total_x, total_y, fig1, drawInterval);
-		            
+					
+			display('DELTA_X')
 			display(delta_x)
+			display('THETA')
 			display(theta)
-           
-
-			total_x = total_x + delta_x;
+		   
+			total_x = total_x + overShoot * delta_x;
 			total_angle = total_angle + theta;
 			
-            tmp = intersect(find(hitPoints > total_x - 0.1), find(hitPoints < total_x + 0.1));
-            
-            if size(tmp) > 0
-                display(hitPoints)
-                display(tmp)
-                display('returned to previous position')
-                break
-            end
-            
+			tmp = intersect(find(hitPoints > total_x + 0.1), find(hitPoints < total_x - 0.1));
+			
+			display('======== HIT POINTS AND TOTAL_X ===========')
+			display(hitPoints)
+			display(total_x)
+			display('===========================================')
+
+			
+			if size(tmp) > 0
+				display(total_x)
+				display(hitPoints)
+				display(tmp)
+				display('returned to previous position')
+				break
+			end
+			
 			if (abs(delta_x) < 0.1)
 				display('robot is stuck inside');
 				break
 			elseif (total_x > goalDistance)
+                display('-------------------------------->THINKS ITS OVERSHOOTING')
+				overShoot = -1;
 			   
-			   turnAngle(serPort, turnVelocity, goalAngle + 180 - (theta/pi)*180);
-			   %display('------------------------------------->finished turnAngle after wall follow');
-			   %AngleSensorRoomba(serPort); % reset angle sensor to 0
+				turnAngle(serPort, turnVelocity, goalAngle + 180 - (theta/pi)*180);
+				%display('------------------------------------->finished turnAngle after wall follow');
+				%AngleSensorRoomba(serPort); % reset angle sensor to 0
 				if (goalAngle == 0)
 					goalAngle = 180;
 				else
 					goalAngle = 0;
 				end
 			else
+				overShoot = 1; % Reset the delta_x sign because we haven't gotten to our goal
 				turnAngle(serPort, turnVelocity, goalAngle + -(theta/pi)*180);
 			end
 			recordAngleTurn(serPort);
@@ -118,22 +138,29 @@ function hw2_team_13(serPort, goalDistance)
 		else % no bump, keep going straight
 			
 			display('------------------------------------->going straight');
+            
 			recordRobotTravel(serPort); % update distance traveled
+            display('------------------------------------->TOTAL_X GOING STRAIGHT');
+            display(total_x)
+            DistanceSensorRoomba(serPort);
+            AngleSensorRoomba(serPort);
+
 			SetFwdVelRadiusRoomba(serPort, wallVelocity, inf);
 			
 
-        end
+		end
 		
-        dElapsed = toc(dStart);
-        if (dElapsed > drawInterval)
-            mapRobot(fig1, total_x, total_y, total_angle);
-            dStart = tic;
-        end
+		dElapsed = toc(dStart);
+		if (dElapsed > drawInterval)
+			mapRobot(fig1, total_x, total_y, total_angle);
+			dStart = tic;
+		end
 
 		pause(0.1);
 
 		if (abs(goalDistance - total_x) <= margin_error)
 			% robot reached goal!
+			display(total_x)
 			stopRobot();
 			display('Robot reached goal!'); 
 			break
