@@ -1,4 +1,11 @@
-function mapRobot(f, robot_x, robot_y, r_angle)
+function newTic = mapRobot(tStart, tInterval, f, robot_x, robot_y, r_angle)
+
+    tElapsed = toc(tStart);
+    if (tElapsed < tInterval)
+        newTic = tStart;
+        return
+    end
+        
     figure(f);
     hold on;
     
@@ -14,5 +21,7 @@ function mapRobot(f, robot_x, robot_y, r_angle)
         [robot_y robot_y + lineLength * sin(r_angle)],...
         'LineWidth', 1, 'Color', [0, 0.8, 1]);
     plot(robot_x, robot_y, '.r');
+    
+    newTic = tic;
 
 end

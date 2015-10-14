@@ -24,10 +24,8 @@
 
 
 % main function 
-function [delta_x, total_angle] = followWall(serPort,...
-    BumpRight, BumpLeft, BumpFront, oX,oY, fig, drawInterval)
-    %BumpRight, BumpLeft, BumpFront, oX,oY, drawInterval)
-
+function [delta_x, currentA] = followWall(serPort,...
+    BumpRight, BumpLeft, BumpFront, oX,oY,currentA, fig, drawInterval)
 
     dStart = tic;
     
@@ -43,7 +41,6 @@ function [delta_x, total_angle] = followWall(serPort,...
 	delta_x = 0; % return: total change in x from starting point
 	
 	total_offset = 0;
-	total_angle = 0;
 	total_distance = 0;
 	
 	% margin of error for sensor reading for stop position
@@ -89,7 +86,7 @@ function [delta_x, total_angle] = followWall(serPort,...
     end
 	
 	function recordAngleTurn(serPort)
-		total_angle = total_angle + AngleSensorRoomba(serPort);
+		currentA = currentA + AngleSensorRoomba(serPort);
 	end
 
 	% record robot's distance traveled from last reading
@@ -98,10 +95,10 @@ function [delta_x, total_angle] = followWall(serPort,...
 		
 		distance = DistanceSensorRoomba(serPort);
 		total_distance = total_distance + distance * 1.5;
-		delta_x = delta_x + distance * cos(total_angle);
-		delta_y = delta_y + distance * sin(total_angle);
+		delta_x = delta_x + distance * cos(currentA);
+		delta_y = delta_y + distance * sin(currentA);
 
-		disp(['total_angle:',num2str(180 * total_angle/pi),...
+		disp(['currentA:',num2str(180 * currentA/pi),...
 			' total_distance:',num2str(total_distance),...
 			' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y)]);
 		
@@ -155,11 +152,9 @@ function [delta_x, total_angle] = followWall(serPort,...
 				[BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
 				WallSensor = WallSensorReadRoomba(serPort);
 				
-                dElapsed = toc(dStart);
-                if (dElapsed > drawInterval)
-                    mapRobot(fig, oX + delta_x, oY + delta_y, total_angle);
-                    dStart = tic;
-                end
+                
+                dStart = mapRobot(dStart,drawInterval,fig,...
+                    oX + delta_x, oY + delta_y, currentA);
         
 				pause(0.1);
 				display('............TRYING TO FIND WALL...........');
@@ -168,11 +163,8 @@ function [delta_x, total_angle] = followWall(serPort,...
 			
         end
 		
-        dElapsed = toc(dStart);
-        if (dElapsed > drawInterval)
-            mapRobot(fig, oX + delta_x, oY + delta_y, total_angle);
-            dStart = tic;
-        end
+        dStart = mapRobot(dStart,drawInterval,fig,...
+            oX + delta_x, oY + delta_y, currentA);
         
 		pause(0.1);
 		
@@ -185,7 +177,7 @@ function [delta_x, total_angle] = followWall(serPort,...
             end
             
             if delta_x > 0 % robot moved towards goal
-                %angleDegrees = -180 * total_angle/pi;
+                %angleDegrees = -180 * currentA/pi;
                 %turnAngle(serPort, turnVelocity, angleDegrees);
                 %AngleSensorRoomba(serPort); % reset angle sensor to 0
                 break

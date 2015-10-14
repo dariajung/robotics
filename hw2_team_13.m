@@ -22,8 +22,6 @@ function hw2_team_13(serPort, goalDistance)
 
 	hitPoints = [];
 	goalDistance = 2;
-	goalAngle = 0;
-	overShoot = 1;	
 	
 	% Read Bumpers, call ONCE at beginning, resets readings
 	BumpsWheelDropsSensorsRoomba(serPort);
@@ -31,9 +29,9 @@ function hw2_team_13(serPort, goalDistance)
 	
 	% Initialize variables keeping track of distance travelled by roomba
 	total_distance = 0;                                 
-	total_x = 0;
-	total_y = 0;
-	total_angle = 0;
+	currentX = 0;
+	currentY = 0;
+	currentA = 0;
 	total_offset = 0;
 	
 	% margin of error for sensor reading for stop position
@@ -43,7 +41,7 @@ function hw2_team_13(serPort, goalDistance)
 	turnVelocity = 0.1;
 	
 	function recordAngleTurn(serPort)
-		total_angle = total_angle + AngleSensorRoomba(serPort);
+		currentA = currentA + AngleSensorRoomba(serPort);
 	end
 	% record robot's distance traveled from last reading
 	function recordRobotTravel(serPort) 
@@ -51,14 +49,14 @@ function hw2_team_13(serPort, goalDistance)
 		
 		distance = DistanceSensorRoomba(serPort);
 		total_distance = total_distance + distance * .97;
-		total_x = total_x + distance * cos(total_angle);
-		total_y = total_y + distance * sin(total_angle);
+		currentX = currentX + distance * cos(currentA);
+		currentY = currentY + distance * sin(currentA);
 
-		disp(['total_angle:',num2str(180 * total_angle/pi),...
+		disp(['currentA:',num2str(180 * currentA/pi),...
 			' total_distance:',num2str(total_distance),...
-			' total_x:',num2str(total_x),' total_y:',num2str(total_y)]);
+			' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
 		
-		total_offset = power(total_x, 2) + power(total_y, 2);
+		total_offset = power(currentX, 2) + power(currentY, 2);
 		display(['total_offset: ', num2str(total_offset)]);
 	end
 
@@ -75,63 +73,53 @@ function hw2_team_13(serPort, goalDistance)
 
 	while 1
 		[BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
-		display('While loop total_x')
-		display(total_x)
+		display('While loop currentX')
+		display(currentX)
 		
 		recordRobotTravel(serPort); % update distance traveled
-		display('------------------------------------->TOTAL_X GOING STRAIGHT');
-		display(total_x)
+		display('------------------------------------->currentX GOING STRAIGHT');
+		display(currentX)
 
 		
 		if (BumpRight || BumpLeft || BumpFront)
 			
 			stopRobot();
 			
-			hitPoints = [hitPoints, total_x];
-			[delta_x, theta] = followWall(serPort,BumpRight, BumpLeft, BumpFront, total_x, total_y, fig1, drawInterval);
+			hitPoints = [hitPoints; currentX, currentA]; % track angle also for thin walls
+			[delta_x, currentA] = followWall(serPort, BumpRight, BumpLeft, BumpFront,...
+                currentX, currentY, currentA, fig1, drawInterval);
 					
-			display('DELTA_X')
-			display(delta_x)
-			display('THETA')
-			display(theta)
+			display(['DELTA_X::::::::::::: ', num2str(delta_x)])
+			display(['CURRENTANGLE:::::::: ', num2str(currentA)])
 		   
-			total_x = total_x + overShoot * delta_x;
-			total_angle = total_angle + theta;
+			currentX = currentX + delta_x;
 			
-			tmp = intersect(find(hitPoints < total_x + 0.2), find(hitPoints > total_x - 0.2));
-			
-			display('======== HIT POINTS AND TOTAL_X ===========')
+			tmpX = intersect(find(hitPoints(:,1) < currentX + 0.2), find(hitPoints(:,1) > currentX - 0.2));
+			tmpA = intersect(find(hitPoints(:,2) < currentA + 0.2), find(hitPoints(:,2) > currentA - 0.2));
+            tmpI = intersect(tmpX, tmpA);
+
+			display('======== HIT POINTS AND currentX ===========')
 			display(hitPoints)
-			display(total_x)
+			display(currentX)
 			display('===========================================')
 
-			
-			if size(tmp) > 0
-				display(total_x)
+			if size(tmpI) > 0
+				display(currentX)
 				display(hitPoints)
 				display(tmp)
-				display('returned to previous position')
+                % matched a previous position
+				display('destination impossible: returned to previous position!!!!!!')
 				break
 			end
 			
-			if (abs(delta_x) < 0.1)
-				display('robot is stuck inside');
-				break
-			elseif (total_x > goalDistance)
+			if (currentX > goalDistance)
                 display('-------------------------------->THINKS ITS OVERSHOOTING')
-				overShoot = -1;
 			   
-				turnAngle(serPort, turnVelocity, goalAngle + 180 - (theta/pi)*180);
+				turnAngle(serPort, turnVelocity, 180 - (currentA/pi)*180);
 				%display('------------------------------------->finished turnAngle after wall follow');
 				%AngleSensorRoomba(serPort); % reset angle sensor to 0
-				if (goalAngle == 0)
-					goalAngle = 180;
-				else
-					goalAngle = 0;
-				end
-			else
-				overShoot = 1; % Reset the delta_x sign because we haven't gotten to our goal
-				turnAngle(serPort, turnVelocity, goalAngle + -(theta/pi)*180);
+            else
+				turnAngle(serPort, turnVelocity, -(currentA/pi)*180);
 			end
 			recordAngleTurn(serPort);
 			
@@ -140,27 +128,23 @@ function hw2_team_13(serPort, goalDistance)
 			display('------------------------------------->going straight');
             
 			recordRobotTravel(serPort); % update distance traveled
-            display('------------------------------------->TOTAL_X GOING STRAIGHT');
-            display(total_x)
+            display('------------------------------------->currentX GOING STRAIGHT');
+            display(currentX)
             DistanceSensorRoomba(serPort);
             AngleSensorRoomba(serPort);
 
 			SetFwdVelRadiusRoomba(serPort, wallVelocity, inf);
 			
 
-		end
+        end
 		
-		dElapsed = toc(dStart);
-		if (dElapsed > drawInterval)
-			mapRobot(fig1, total_x, total_y, total_angle);
-			dStart = tic;
-		end
+        dStart = mapRobot(dStart,drawInterval,fig1, currentX, currentY, currentA);
 
 		pause(0.1);
 
-		if (abs(goalDistance - total_x) <= margin_error)
+		if (abs(goalDistance - currentX) <= margin_error)
 			% robot reached goal!
-			display(total_x)
+			display(currentX)
 			stopRobot();
 			display('Robot reached goal!'); 
 			break
