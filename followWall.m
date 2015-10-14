@@ -25,7 +25,8 @@
 
 % main function 
 function [delta_x, currentA] = followWall(serPort,...
-    BumpRight, BumpLeft, BumpFront, oX,oY,currentA, fig, drawInterval)
+    BumpRight, BumpLeft, BumpFront, oX, oY, currentA, goalDist,...
+    fig, drawInterval)
 
     dStart = tic;
     
@@ -46,13 +47,17 @@ function [delta_x, currentA] = followWall(serPort,...
 	% margin of error for sensor reading for stop position
 	margin_error = power(0.25, 2);
 	
+    originalWallAngle = 0;
     if (BumpRight)
         turnAngle(serPort, turnVelocity, 45);
+        originalWallAngle = 45;
     elseif (BumpLeft)
         % turn around to hug right
         turnAngle(serPort, turnVelocity, 120);
+        originalWallAngle = 120;
     elseif (BumpFront)
         turnAngle(serPort, turnVelocity, 90);   
+        originalWallAngle = 90;
     end
 				
     recordAngleTurn(serPort);
@@ -94,7 +99,7 @@ function [delta_x, currentA] = followWall(serPort,...
 		recordAngleTurn(serPort);
 		
 		distance = DistanceSensorRoomba(serPort);
-		total_distance = total_distance + distance * 1.5;
+		total_distance = total_distance + distance;
 		delta_x = delta_x + distance * cos(currentA);
 		delta_y = delta_y + distance * sin(currentA);
 
@@ -170,29 +175,33 @@ function [delta_x, currentA] = followWall(serPort,...
 		
 		recordRobotTravel(serPort); % update distance traveled
         if ((state == DRIVING) && (on_m_line()))
-            % robot returned to origin (offset close to 0)
             
-            if (abs(delta_x) < 0.1) 
-                break
+            
+            distGoalBefore = goalDist - oX;
+            distGoalNow = goalDist - (oX + delta_x);
+            
+            % reached M line again and closer to goal
+            if (abs(distGoalNow) < abs(distGoalBefore) || abs(delta_x) < 0.2)
+                
+                if (abs(originalWallAngle - currentA) < 0.1)
+                    display('followWall: RETURNED TO START!!! STUCK')
+                else
+                    
+                    display('followWall: CLOSER TO GOAL!!!!! (or thin wall)')
+                    display('Robot returned to M line!');    
+                    stopRobot();
+                    return
+                end
+
+            else
+                display('followWall: FARTHER FROM GOAL!!!!!')
             end
-            
-            if delta_x > 0 % robot moved towards goal
-                %angleDegrees = -180 * currentA/pi;
-                %turnAngle(serPort, turnVelocity, angleDegrees);
-                %AngleSensorRoomba(serPort); % reset angle sensor to 0
-                break
-            end
-            
+
             pause(0.1);
-            
             
         elseif ((state == INIT) && (total_offset > margin_error))
             state = DRIVING;
             display('-----------------------------> first time out of margin');
         end
-	end
-
-	display('Robot returned to M line!');    
-	stopRobot();
+    end
 end
-

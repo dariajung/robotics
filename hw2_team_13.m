@@ -16,7 +16,7 @@
 function hw2_team_13(serPort, goalDistance)
 	
 	fig1 = figure('Name','robot path'); % draw robot path
-	axes('XLim', [-2 8], 'YLim', [-5 5]);
+	axes('XLim', [-2 6], 'YLim', [-4 4]);
 	drawInterval = 0.5; % draw every 0.5 seconds
 	dStart = tic;
 
@@ -87,34 +87,21 @@ function hw2_team_13(serPort, goalDistance)
 			
 			hitPoints = [hitPoints; currentX, currentA]; % track angle also for thin walls
 			[delta_x, currentA] = followWall(serPort, BumpRight, BumpLeft, BumpFront,...
-                currentX, currentY, currentA, fig1, drawInterval);
-					
+                currentX, currentY, currentA, goalDistance, fig1, drawInterval);
+			
+            
+            
+            
+            
+            
+            
 			display(['DELTA_X::::::::::::: ', num2str(delta_x)])
 			display(['CURRENTANGLE:::::::: ', num2str(currentA)])
 		   
 			currentX = currentX + delta_x;
-			
-			tmpX = intersect(find(hitPoints(:,1) < currentX + 0.2), find(hitPoints(:,1) > currentX - 0.2));
-			tmpA = intersect(find(hitPoints(:,2) < currentA + 0.2), find(hitPoints(:,2) > currentA - 0.2));
-            tmpI = intersect(tmpX, tmpA);
 
-			display('======== HIT POINTS AND currentX ===========')
-			display(hitPoints)
-			display(currentX)
-			display('===========================================')
-
-			if size(tmpI) > 0
-				display(currentX)
-				display(hitPoints)
-				display(tmp)
-                % matched a previous position
-				display('destination impossible: returned to previous position!!!!!!')
-				break
-			end
-			
 			if (currentX > goalDistance)
                 display('-------------------------------->THINKS ITS OVERSHOOTING')
-			   
 				turnAngle(serPort, turnVelocity, 180 - (currentA/pi)*180);
 				%display('------------------------------------->finished turnAngle after wall follow');
 				%AngleSensorRoomba(serPort); % reset angle sensor to 0
@@ -122,6 +109,23 @@ function hw2_team_13(serPort, goalDistance)
 				turnAngle(serPort, turnVelocity, -(currentA/pi)*180);
 			end
 			recordAngleTurn(serPort);
+            
+            tmpX = intersect(find(hitPoints(:,1) < currentX + 0.2), find(hitPoints(:,1) > currentX - 0.2));
+			tmpA = intersect(find(hitPoints(:,2) < currentA + 0.2), find(hitPoints(:,2) > currentA - 0.2));
+            tmpI = intersect(tmpX, tmpA);
+
+			display('======== HIT POINTS AND currentX ===========')
+			display(hitPoints)
+			display(currentX)
+            display(currentA)
+			display('===========================================')
+
+			if size(tmpI) > 0
+				display(currentX)
+				display(hitPoints)
+				display('destination impossible: returned to previous position!!!!!!')
+				break
+			end
 			
 		else % no bump, keep going straight
 			
