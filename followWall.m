@@ -97,7 +97,7 @@ function [delta_x, total_angle] = followWall(serPort,...
 		recordAngleTurn(serPort);
 		
 		distance = DistanceSensorRoomba(serPort);
-		total_distance = total_distance + distance * 0.97;
+		total_distance = total_distance + distance * 1.5;
 		delta_x = delta_x + distance * cos(total_angle);
 		delta_y = delta_y + distance * sin(total_angle);
 

@@ -98,7 +98,7 @@ function hw2_team_13(serPort, goalDistance)
 			total_x = total_x + overShoot * delta_x;
 			total_angle = total_angle + theta;
 			
-			tmp = intersect(find(hitPoints > total_x + 0.1), find(hitPoints < total_x - 0.1));
+			tmp = intersect(find(hitPoints < total_x + 0.2), find(hitPoints > total_x - 0.2));
 			
 			display('======== HIT POINTS AND TOTAL_X ===========')
 			display(hitPoints)
