@@ -84,7 +84,7 @@ function [delta_x, currentA] = followWall(serPort,...
             display('............TRYING TO ROTATE AWAY...........');
         end
         % move forward a bit after turning
-        travelDist(serPort, fwdVelocity, 0.05);
+        travelDist(serPort, fwdVelocity, 0.03);
         display('............LEFT WALL!!!...........');
 
     end
