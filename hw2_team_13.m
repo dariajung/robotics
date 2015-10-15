@@ -62,7 +62,7 @@ function hw2_team_13(serPort)
 	end
 
 	function stopRobot()
-		SetFwdVelAngVelCreate(serPort, 0, inf); % Stop the Robot
+		SetFwdVelAngVelCreate(serPort, 0, 0); % Stop the Robot
 	end
 
 	% robot hit wall, reset sensors to start measuring change
@@ -70,7 +70,7 @@ function hw2_team_13(serPort)
 	AngleSensorRoomba(serPort);
 	
 	% STARTING ROBOT
-	SetFwdVelAngVelCreate(serPort, wallVelocity, inf); % Move Forward
+	SetFwdVelAngVelCreate(serPort, wallVelocity, 0); % Move Forward
 
 	while 1
 		[BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
@@ -132,7 +132,7 @@ function hw2_team_13(serPort)
             DistanceSensorRoomba(serPort);
             AngleSensorRoomba(serPort);
 
-			SetFwdVelAngVelCreate(serPort, wallVelocity, inf);
+			SetFwdVelAngVelCreate(serPort, wallVelocity, 0);
 			
 
         end
