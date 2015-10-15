@@ -2,7 +2,8 @@
 % COMS W4733 Computational Aspects of Robotics 2015
 %
 % Homework 2
-% Program works in both simulator and real-life.
+% COMMENTS: For some reason, even if the robot has a radius of infinity
+% it drifts upwards when moving in a straight line (left to right).
 %
 % Team number: 13
 % Team leader: Daria Jung (djj2115)
@@ -13,7 +14,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % main function 
-function hw2_team_13(serPort, goalDistance)
+function hw2_team_13(serPort)
 	
 	fig1 = figure('Name','robot path'); % draw robot path
 	axes('XLim', [-2 6], 'YLim', [-4 4]);
@@ -21,7 +22,7 @@ function hw2_team_13(serPort, goalDistance)
 	dStart = tic;
 
 	hitPoints = [];
-	goalDistance = 2;
+	goalDistance = 4; % hardcoded since assignment specifies 4 meters
 	
 	% Read Bumpers, call ONCE at beginning, resets readings
 	BumpsWheelDropsSensorsRoomba(serPort);
@@ -33,11 +34,11 @@ function hw2_team_13(serPort, goalDistance)
 	currentY = 0;
 	currentA = 0;
 	total_offset = 0;
-	
+    	
 	% margin of error for sensor reading for stop position
 	margin_error = power(0.4, 2);
 
-	wallVelocity = 0.2;
+	wallVelocity = 0.1;
 	turnVelocity = 0.1;
 	
 	function recordAngleTurn(serPort)
@@ -89,12 +90,6 @@ function hw2_team_13(serPort, goalDistance)
 			[delta_x, currentA] = followWall(serPort, BumpRight, BumpLeft, BumpFront,...
                 currentX, currentY, currentA, goalDistance, fig1, drawInterval);
 			
-            
-            
-            
-            
-            
-            
 			display(['DELTA_X::::::::::::: ', num2str(delta_x)])
 			display(['CURRENTANGLE:::::::: ', num2str(currentA)])
 		   

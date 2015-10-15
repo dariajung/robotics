@@ -2,7 +2,6 @@
 % COMS W4733 Computational Aspects of Robotics 2015
 %
 % Homework 2
-% Program works in both simulator and real-life.
 %
 % Team number: 13
 % Team leader: Daria Jung (djj2115)
@@ -35,7 +34,7 @@ function [delta_x, currentA] = followWall(serPort,...
 	AngleSensorRoomba(serPort);
     
 	fwdVelocity = 0.1;
-	wallVelocity = 0.2;
+	wallVelocity = 0.1;
 	turnVelocity = 0.1;
 	
 	delta_y = 0;
@@ -85,7 +84,7 @@ function [delta_x, currentA] = followWall(serPort,...
             display('............TRYING TO ROTATE AWAY...........');
         end
         % move forward a bit after turning
-        travelDist(serPort, fwdVelocity, 0.05);
+        travelDist(serPort, fwdVelocity, 0.1);
         display('............LEFT WALL!!!...........');
 
     end
@@ -150,7 +149,7 @@ function [delta_x, currentA] = followWall(serPort,...
 			% try to find wall
 			while (~(WallSensor || BumpRight || BumpLeft || BumpFront))
 				turnAngle(serPort, turnVelocity, -15); % turn right towards wall
-				travelDist(serPort, 0.05, 0.03);
+				travelDist(serPort, 0.05, 0.1);
                 
 				recordRobotTravel(serPort); % update distance traveled
 			
