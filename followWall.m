@@ -1,7 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % COMS W4733 Computational Aspects of Robotics 2015
 %
-% Homework 2
+% Homework 2 (followWall.m)
 %
 % Team number: 13
 % Team leader: Daria Jung (djj2115)

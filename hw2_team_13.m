@@ -1,9 +1,8 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % COMS W4733 Computational Aspects of Robotics 2015
 %
-% Homework 2
-% COMMENTS: For some reason, even if the robot has a radius of infinity
-% it drifts upwards when moving in a straight line (left to right).
+% Homework 2 (hw2_team_13.m)
+% COMMENTS: 
 %
 % Team number: 13
 % Team leader: Daria Jung (djj2115)
@@ -49,7 +48,7 @@ function hw2_team_13(serPort)
 		recordAngleTurn(serPort);
 		
 		distance = DistanceSensorRoomba(serPort);
-		total_distance = total_distance + distance * .97;
+		total_distance = total_distance + distance;
 		currentX = currentX + distance * cos(currentA);
 		currentY = currentY + distance * sin(currentA);
 
