@@ -84,7 +84,7 @@ function [delta_x, currentA] = followWall(serPort,...
             display('............TRYING TO ROTATE AWAY...........');
         end
         % move forward a bit after turning
-        travelDist(serPort, fwdVelocity, 0.1);
+        travelDist(serPort, fwdVelocity, 0.05);
         display('............LEFT WALL!!!...........');
 
     end
@@ -149,7 +149,7 @@ function [delta_x, currentA] = followWall(serPort,...
 			% try to find wall
 			while (~(WallSensor || BumpRight || BumpLeft || BumpFront))
 				turnAngle(serPort, turnVelocity, -15); % turn right towards wall
-				travelDist(serPort, 0.05, 0.1);
+				travelDist(serPort, 0.05, 0.05);
                 
 				recordRobotTravel(serPort); % update distance traveled
 			
