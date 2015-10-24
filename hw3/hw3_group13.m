@@ -24,140 +24,252 @@ function hw3_team_13(serPort, goalDistance)
     dStart = tic;
 
     hitPoints = [];
-    goalDistance = 4;
+    %goalDistance = 4;
+    
+    
+    goalX = 4;
+    goalY = 0;
     
     % Read Bumpers, call ONCE at beginning, resets readings
     BumpsWheelDropsSensorsRoomba(serPort);
     WallSensorReadRoomba(serPort);      % Read Wall Sensor, Requires WallsSensorReadRoomba file
     
-    % Initialize variables keeping track of distance travelled by roomba
-    total_distance = 0;                                 
+    % Initialize variables keeping track of distance travelled by roomba                                
     currentX = 0;
     currentY = 0;
     currentA = 0;
+    previousA = 0;
+    previousX = 0;
+    previousY = 0;
+                
     total_offset = 0;
+    
+    delta_x = 0;
+    delta_y = 0;
     
     % margin of error for sensor reading for stop position
     margin_error = power(0.25, 2);
 
-    wallVelocity = 0.08;
+    fwdVelocity = 0.08;
     turnVelocity = 0.1;
     
-    function recordAngleTurn(serPort)
-        currentA = currentA + AngleSensorRoomba(serPort);
-    end
-    % record robot's distance traveled from last reading
-    function recordRobotTravel(serPort) 
-        recordAngleTurn(serPort);
-        
-        distance = DistanceSensorRoomba(serPort);
-        total_distance = total_distance + distance * 1.02; % * .97
-        currentX = currentX + distance * cos(currentA);
-        currentY = currentY + distance * sin(currentA);
-
-        disp(['currentA:',num2str(180 * currentA/pi),...
-            ' total_distance:',num2str(total_distance),...
-            ' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
-        
-        %total_offset = power(currentX, 2) + power(currentY, 2);
-        %display(['total_offset: ', num2str(total_offset)]);
-    end
-
-    function stopRobot()
-        SetFwdVelAngVelCreate(serPort, 0, 0); % Stop the Robot
-    end
+   
 
     % robot hit wall, reset sensors to start measuring change
     DistanceSensorRoomba(serPort);
     AngleSensorRoomba(serPort);
     
     % STARTING ROBOT
-    SetFwdVelAngVelCreate(serPort, wallVelocity, 0); % Move Forward
-
+    state = 0; % going straight
+                % state = 1; following wall
     while 1
-        [BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
-        display('While loop currentX')
-        display(currentX)
         
-        recordRobotTravel(serPort); % update distance traveled
-        display('------------------------------------->currentX GOING STRAIGHT');
-        display(currentX)
+        
+        
+        
+        if (state == 0)
+            SetFwdVelAngVelCreate(serPort, fwdVelocity, 0); % Move Forward
+            
+            [BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+            if (BumpRight || BumpLeft || BumpFront)
+            
+                stopRobot();
 
+                previousA = currentA;
+                previousX = currentX;
+                previousY = currentY;
+
+                % orient to wall
+                travelDist(serPort, 0.05, -0.015); % move back from wall a bit initially
+                while (~WallSensorReadRoomba(serPort))
+                    turnAngle(serPort, turnVelocity, 2);
+                    recordAngleTurn();
+
+                    pause(0.1);    
+                end
+                turnAngle(serPort, turnVelocity, 66);
+                recordAngleTurn();
         
-        if (BumpRight || BumpLeft || BumpFront)
+                state = 1;  
+            else
+                
+                dX = goalX - currentX;
+                dY = goalY - currentY;
+                distanceFromGoal = sqrt(dX * dX + dY + dY);
+                if (distanceFromGoal < 0.05)
+                    display('reached goal');
+                    state = 2;
+                end
+                
+                
+            end
+        end
+        
+        if (state == 1)
+            followWall(1);
             
-            stopRobot();
+            pdX = goalX - previousX;
+            pdY = goalY - previousY;
+            previousDistance = sqrt(pdX * pdX + pdY * pdY);
             
-            hitPoints = [hitPoints; currentX, currentA]; % track angle also for thin walls
-            [delta_x, currentA] = followWall(serPort, BumpRight, BumpLeft, BumpFront,...
-                currentX, currentY, currentA, goalDistance, fig1, drawInterval);
-            
-            return
-            
-            
+            cdX = goalX - currentX;
+            cdY = goalY - currentY;
+            currentDistance = sqrt(cdX * cdX + cdY * cdY);
             
             
+            ddX = currentX - previousX;
+            ddY = currentY - previousY;
+            deltaDistance = sqrt(ddX * ddX + ddY * ddY);
             
             
-%           display(['DELTA_X::::::::::::: ', num2str(delta_x)])
-%           display(['CURRENTANGLE:::::::: ', num2str(currentA)])
-%          
-%           currentX = currentX + delta_x;
-% 
-%           if (currentX > goalDistance)
-%                 display('-------------------------------->THINKS ITS OVERSHOOTING')
-%               turnAngle(serPort, turnVelocity, 180 - (currentA/pi)*180);
-%               %display('------------------------------------->finished turnAngle after wall follow');
-%               %AngleSensorRoomba(serPort); % reset angle sensor to 0
-%             else
-%               turnAngle(serPort, turnVelocity, -(currentA/pi)*180);
-%           end
-%           recordAngleTurn(serPort);
-%             
-%             tmpX = intersect(find(hitPoints(:,1) < currentX + 0.15), find(hitPoints(:,1) > currentX - 0.15));
-%           tmpA = intersect(find(hitPoints(:,2) < currentA + 0.2), find(hitPoints(:,2) > currentA - 0.2));
-%             tmpI = intersect(tmpX, tmpA);
-% 
-%           display('======== HIT POINTS AND currentX ===========')
-%           display(hitPoints)
-%           display(currentX)
-%             display(currentA)
-%           display('===========================================')
-% 
-%             if abs(delta_x) < 0.1
-%           %if size(tmpI) > 0
-%               display(currentX)
-%               display(hitPoints)
-%               display('destination impossible: returned to previous position!!!!!!')
-%               break
-%           end
-            
-        else % no bump, keep going straight
-            
-%           display('------------------------------------->going straight');
-%             
-%           recordRobotTravel(serPort); % update distance traveled
-%             display('------------------------------------->currentX GOING STRAIGHT');
-%             display(currentX)
-%             DistanceSensorRoomba(serPort);
-%             AngleSensorRoomba(serPort);
-% 
-%           SetFwdVelAngVelCreate(serPort, wallVelocity, 0);
-%           
+            disp([' previousX:',num2str(previousX),' previousY:',num2str(previousY),...
+          ' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y),...
+          ' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
+
+      
+      
+            if (deltaDistance < 0.1)
+                display('back to where it started -- STUCK!');
+                
+                state = 2;
+            elseif (currentDistance < previousDistance && previousDistance > deltaDistance)
+                % we got closer!
+                display('got closer!');
+                
+                
+                reorientAngle = -(currentA - previousA);
+                reorientDegrees = 180 * reorientAngle / pi;
+                display(reorientDegrees);
+                turnAngle(serPort, turnVelocity, reorientDegrees);
+                recordAngleTurn();
+                
+                
+                state = 0;
+            else
+                display('got farther!');
+                state = 1;
+            end
 
         end
         
-%         dStart = mapRobot(dStart,drawInterval,fig1, currentX, currentY, currentA);
-% 
+        if (state == 2)
+            
+            stopRobot();
+            
+            return;
+        end
+            
+            
+            
+            
+            
+            
+         
+        
+
+        
+        % dStart = mapRobot(dStart,drawInterval,fig1, currentX, currentY, currentA);
+
+        recordRobotTravel(); % update distance traveled
         pause(0.1);
-% 
-%       if (abs(goalDistance - currentX) <= margin_error)
-%           % robot reached goal!
-%           display(currentX)
-%           stopRobot();
-%           display('Robot reached goal!'); 
-%           break
-%       end
+
+    end
+    
+    
+    
+    
+    
+    
+    
+    % 0 means no goal, return at start, else on m line
+    function followWall(m_line)
+
+        dStart = tic;
+        
+        
+        total_offset = 0;
+        originalWallAngle = 0;
+
+
+        SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);
+
+        outOfMargin = 0;
+        while 1
+            [BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+            if (BumpRight)
+                turnAngle(serPort, turnVelocity, 5);
+            elseif (BumpLeft)
+                turnAngle(serPort, turnVelocity, -5);
+            elseif (BumpFront)
+                turnAngle(serPort, turnVelocity, 25);
+            end
+            
+            Bumps = BumpRight || BumpLeft || BumpFront;
+            
+            if (~WallSensorReadRoomba(serPort) && ~Bumps)
+
+                stopRobot();
+                SetFwdVelRadiusRoomba(serPort, fwdVelocity, -0.2);
+            elseif (Bumps)
+                stopRobot();
+            else
+
+                SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);
+            end
+            
+            recordRobotTravel();
+            
+            delta_x = currentX - previousX; % return: total change in x from starting point
+            delta_y = currentY - previousY;
+        
+            if (~outOfMargin && abs(delta_x) > 0.05 && abs(delta_y) > 0.05)
+                outOfMargin = 1;
+            end
+            
+            % check if back to origin, or on m-line
+            if (outOfMargin) 
+                display('---------------------------->OUT OF MARGIN');
+                if (abs(delta_y) < 0.05 && m_line == 1)
+                    %%% on the m-line %%%
+                    stopRobot();
+                    return;
+                end
+                
+                if (abs(delta_x) < 0.05 && abs(delta_y) < 0.05)
+                    %%%% back to the original spot %%%%
+                    stopRobot();
+                    return;
+                end
+                
+            end
+            
+            pause(0.1);
+        end
+    end
+
+    function recordAngleTurn()
+        currentA = currentA + AngleSensorRoomba(serPort);
+    end
+    % record robot's distance traveled from last reading
+    function recordRobotTravel() 
+      recordAngleTurn();
+
+      distance = DistanceSensorRoomba(serPort);
+
+      currentX = currentX + distance * cos(currentA);
+      currentY = currentY + distance * sin(currentA);
+
+      disp(['currentA:',num2str(180 * currentA/pi),...
+          ' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y),...
+          ' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
+
+      %total_offset = power(delta_x, 2) + power(delta_y, 2);
+      %display(['total_offset: ', num2str(total_offset)]);
+    end
+
+    
+    function stopRobot()
+        SetFwdVelRadiusRoomba(serPort, 0, inf); % Stop the Robot
     end
 end
 
@@ -169,216 +281,3 @@ end
 % obstacles?
 % if goal is inside obstacle?
 % instead of if theta > 0 theta or small number
-
-
-% main function 
-function [delta_x, currentA] = followWall(serPort,...
-    BumpRight, BumpLeft, BumpFront, oX, oY, currentA, goalDist,...
-    fig, drawInterval)
-
-    dStart = tic;
-    
-    % TODO: reset? sensors to start measuring change
-    DistanceSensorRoomba(serPort);
-    AngleSensorRoomba(serPort);
-    
-    fwdVelocity = 0.1;
-    turnVelocity = 0.15;
-    
-    delta_y = 0;
-    delta_x = 0; % return: total change in x from starting point
-    
-    total_offset = 0;
-    total_distance = 0;
-    
-    % margin of error for sensor reading for stop position
-    margin_error = power(0.25, 2);
-    
-    originalWallAngle = 0;
-    
-    
-    travelDist(serPort, 0.05, -0.015);
-    
-    
-    while (~WallSensorReadRoomba(serPort))
-        turnAngle(serPort, turnVelocity, 2);
-        
-        pause(0.1);    
-    end
-    
-    AngleSensorRoomba(serPort);
-    turnAngle(serPort, turnVelocity, 66);
-    display(AngleSensorRoomba(serPort));
-    
-    SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);
-    
-    while 1
-        [BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
-        if (BumpRight || BumpLeft || BumpFront)
-            turnAngle(serPort, turnVelocity, 5);
-        end
-        if (~WallSensorReadRoomba(serPort))
-            
-            stopRobot(serPort);
-            SetFwdVelRadiusRoomba(serPort, fwdVelocity, -0.2);
-        else
-            
-            SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);
-        end
-        
-        pause(0.1);
-    end
-    
-      
-%     if (BumpRight)
-%         turnAngle(serPort, turnVelocity, 45);
-%         originalWallAngle = 45;
-%     elseif (BumpLeft)
-%         % turn around to hug right
-%         turnAngle(serPort, turnVelocity, 120);
-%         originalWallAngle = 120;
-%     elseif (BumpFront)
-%         turnAngle(serPort, turnVelocity, 90);   
-%         originalWallAngle = 90;
-%     end
-%               
-%     recordAngleTurn(serPort);
-
-    % Robot turns and re-orients itself depending on bump sensor reading
-%     function bumpAction(serPort, BumpRight, BumpLeft, BumpFront)
-%         stopRobot();
-% 
-%         % keep turning until not bumping into wall anymore
-%         while (BumpRight || BumpLeft || BumpFront)
-% 
-%             if (BumpRight)
-%                 turnAngle(serPort, turnVelocity, 10);
-%             elseif (BumpLeft)
-%                 turnAngle(serPort, turnVelocity, -10);
-%             elseif (BumpFront)
-%                 turnAngle(serPort, turnVelocity, 10);
-%             end
-% 
-%             recordAngleTurn(serPort)
-% 
-%             [BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
-% 
-%             pause(0.1);
-%             display('............TRYING TO ROTATE AWAY...........');
-%         end
-%         % move forward a bit after turning
-%         travelDist(serPort, fwdVelocity, 0.05);
-%         display('............LEFT WALL!!!...........');
-% 
-%     end
-%   
-%   function recordAngleTurn(serPort)
-%       currentA = currentA + AngleSensorRoomba(serPort);
-%   end
-% 
-%   % record robot's distance traveled from last reading
-%   function recordRobotTravel(serPort) 
-%       recordAngleTurn(serPort);
-%       
-%       distance = DistanceSensorRoomba(serPort);
-%       total_distance = total_distance + distance * 1.02;
-%       delta_x = delta_x + distance * cos(currentA);
-%       delta_y = delta_y + distance * sin(currentA);
-% 
-%       disp(['currentA:',num2str(180 * currentA/pi),...
-%           ' total_distance:',num2str(total_distance),...
-%           ' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y)]);
-%       
-%       %total_offset = power(delta_x, 2) + power(delta_y, 2);
-%       %display(['total_offset: ', num2str(total_offset)]);
-%   end
-% 
-%   function [onM] = on_m_line()
-%       
-%         display(delta_y);
-%         
-%         if (abs(delta_y) <= margin_error)
-%             onM = 1;
-%         else
-%             onM = 0;
-%         end
-%   end
-% 
-%   
-% 
-% 
-% 
-%   % states
-%   INIT = 0;
-%   DRIVING = 1;
-%   state = INIT;
-%   while 1
-%       [BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
-%       WallSensor = WallSensorReadRoomba(serPort);
-%       %display(WallSensor)
-% 
-%         if (BumpRight || BumpLeft || BumpFront)
-%           bumpAction(serPort, BumpRight, BumpLeft, BumpFront);
-% 
-%       elseif (WallSensor)
-%           % Move Forward
-%           SetFwdVelAngVelCreate(serPort, wallVelocity, 0);
-%       else % no bump and no wall sensor, went off wall!
-%           
-%           stopRobot();
-%           
-%           % try to find wall
-%           while (~(WallSensor || BumpRight || BumpLeft || BumpFront))
-%               turnAngle(serPort, turnVelocity, -15); % turn right towards wall
-%               travelDist(serPort, 0.05, 0.03);
-%                 
-%               recordRobotTravel(serPort); % update distance traveled
-%           
-%               [BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
-%               WallSensor = WallSensorReadRoomba(serPort);
-%               
-%                 
-%                 dStart = mapRobot(dStart,drawInterval,fig,...
-%                     oX + delta_x, oY + delta_y, currentA);
-%         
-%               pause(0.1);
-%               display('............TRYING TO FIND WALL...........');
-%           end
-%           display('............FOUND WALL!!!...........');
-%           
-%         end
-%       
-%         dStart = mapRobot(dStart,drawInterval,fig,...
-%             oX + delta_x, oY + delta_y, currentA);
-%         
-%       pause(0.1);
-%       
-%       recordRobotTravel(serPort); % update distance traveled
-%         if ((state == DRIVING) && (on_m_line()))
-%             
-%             
-%             
-%             % overshoot
-%             if ((currX > goalDist && goalDist > oX) || (currX < goalDist && goalDist < oX))
-%                 
-%                 
-%                 % overshoot, keep going
-%                 display('OVVVERRRRR');
-% 
-%             else
-%                 display('RETURNNING');
-%                 return
-%             end
-% 
-%             pause(0.1);
-%             
-%         elseif ((state == INIT) && (total_offset > margin_error))
-%             state = DRIVING;
-%             display('-----------------------------> first time out of margin');
-%         end
-%     end
-end
-
-function stopRobot(serPort)
-    SetFwdVelRadiusRoomba(serPort, 0, inf); % Stop the Robot
-end
