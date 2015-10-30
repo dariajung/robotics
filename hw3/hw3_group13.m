@@ -15,16 +15,42 @@
 % main function 
 function hw3_team_13(serPort, goalDistance)
     
-    fig1 = figure('Name','robot path'); % draw robot path
+    % INIT OCCUPANCY GRID
+    % -1 (grey) = not visited
+    % 0 (green) = visited, no obstacle
+    % 1 (red) = visited, obstacle
+    GREEN = 0;
+    RED = 1;
+    colorState = 0;
+    
+    occFig = figure;
+    
+    xRange = [-10 10];
+    yRange = [-10 10];
+    xlim(xRange);
+    ylim(yRange);
+    
+    occGrid = zeros(20,20);
+    occGrid(:,:) = -1; % all grey
+    
+    cmap = [0.9,0.9,0.9]; % 1st row = red; 2nd = gray; 3rd = blue
+    colormap(cmap);
+    
+    imagesc(xRange,yRange,occGrid);
+    
+    drawnow; % update grid
+    grid on;
+    hold on;
+    
+    % random angles to choose from
+    randomAngle = 20:20:160;
+
+    %fig1 = figure('Name','robot path'); % draw robot path
     %close(fig1);
     
     
-    axes('XLim', [-2 6], 'YLim', [-4 4]);
-    drawInterval = 0.5; % draw every 0.5 seconds
-    dStart = tic;
+%     axes('XLim', [-2 6], 'YLim', [-4 4]);
 
-    hitPoints = [];
-    %goalDistance = 4;
     
     
     goalX = 4;
@@ -36,7 +62,8 @@ function hw3_team_13(serPort, goalDistance)
     
     % Initialize variables keeping track of distance travelled by roomba                                
     currentX = 0;
-    currentY = 0;
+    currentY = 0;    
+    
     currentA = 0;
     previousA = 0;
     previousX = 0;
@@ -106,20 +133,20 @@ function hw3_team_13(serPort, goalDistance)
         end
         
         if (state == 1)
-            followWall(1);
+            followWall(0);
             
-            pdX = goalX - previousX;
-            pdY = goalY - previousY;
-            previousDistance = sqrt(pdX * pdX + pdY * pdY);
-            
-            cdX = goalX - currentX;
-            cdY = goalY - currentY;
-            currentDistance = sqrt(cdX * cdX + cdY * cdY);
-            
-            
-            ddX = currentX - previousX;
-            ddY = currentY - previousY;
-            deltaDistance = sqrt(ddX * ddX + ddY * ddY);
+%             pdX = goalX - previousX;
+%             pdY = goalY - previousY;
+%             previousDistance = sqrt(pdX * pdX + pdY * pdY);
+%             
+%             cdX = goalX - currentX;
+%             cdY = goalY - currentY;
+%             currentDistance = sqrt(cdX * cdX + cdY * cdY);
+%             
+%             
+%             ddX = currentX - previousX;
+%             ddY = currentY - previousY;
+%             deltaDistance = sqrt(ddX * ddX + ddY * ddY);
             
             
             disp([' previousX:',num2str(previousX),' previousY:',num2str(previousY),...
@@ -128,27 +155,32 @@ function hw3_team_13(serPort, goalDistance)
 
       
       
-            if (deltaDistance < 0.1)
-                display('back to where it started -- STUCK!');
+%             if (deltaDistance < 0.1)
+                %display('back to where it started -- STUCK!'); % state = 2
                 
-                state = 2;
-            elseif (currentDistance < previousDistance && previousDistance > deltaDistance)
-                % we got closer!
-                display('got closer!');
-                
-                
-                reorientAngle = -(currentA - previousA);
-                reorientDegrees = 180 * reorientAngle / pi;
-                display(reorientDegrees);
-                turnAngle(serPort, turnVelocity, reorientDegrees);
+                newDirection = randomAngle(randi([1 size(randomAngle,2)],1));
+                turnAngle(serPort, turnVelocity, newDirection);
                 recordAngleTurn();
                 
-                
                 state = 0;
-            else
-                display('got farther!');
-                state = 1;
-            end
+                
+%             elseif (currentDistance < previousDistance && previousDistance > deltaDistance)
+%                 % we got closer!
+%                 display('got closer!');
+%                 
+%                 
+%                 reorientAngle = -(currentA - previousA);
+%                 reorientDegrees = 180 * reorientAngle / pi;
+%                 display(reorientDegrees);
+%                 turnAngle(serPort, turnVelocity, reorientDegrees);
+%                 recordAngleTurn();
+%                 
+%                 
+%                 state = 0;
+%             else
+%                 display('got farther!');
+%                 state = 1;
+%             end
 
         end
         
@@ -170,7 +202,7 @@ function hw3_team_13(serPort, goalDistance)
         
         % dStart = mapRobot(dStart,drawInterval,fig1, currentX, currentY, currentA);
 
-        recordRobotTravel(); % update distance traveled
+        recordRobotTravel(GREEN); % update distance traveled
         pause(0.1);
 
     end
@@ -217,7 +249,7 @@ function hw3_team_13(serPort, goalDistance)
                 SetFwdVelRadiusRoomba(serPort, fwdVelocity, inf);
             end
             
-            recordRobotTravel();
+            recordRobotTravel(RED);
             
             delta_x = currentX - previousX; % return: total change in x from starting point
             delta_y = currentY - previousY;
@@ -251,7 +283,7 @@ function hw3_team_13(serPort, goalDistance)
         currentA = currentA + AngleSensorRoomba(serPort);
     end
     % record robot's distance traveled from last reading
-    function recordRobotTravel() 
+    function recordRobotTravel(gridColor) 
       recordAngleTurn();
 
       distance = DistanceSensorRoomba(serPort);
@@ -265,11 +297,49 @@ function hw3_team_13(serPort, goalDistance)
 
       %total_offset = power(delta_x, 2) + power(delta_y, 2);
       %display(['total_offset: ', num2str(total_offset)]);
+      
+      
+      updateGrid(currentX,currentY,gridColor);
+      
     end
 
     
     function stopRobot()
         SetFwdVelRadiusRoomba(serPort, 0, inf); % Stop the Robot
+    end
+
+    function updateGrid(c,r,value)
+%         display(value);
+        
+        c = round(c + 1);
+        r = round(r + 1);
+      
+        
+        c = c + 10;
+        r = 10 - r;
+        
+        
+        figure(occFig);
+        occGrid(r,c) = value;
+        
+        if (value == GREEN && colorState == 0)
+            colorState = 1;
+            cmap = [0.9,0.9,0.9;...
+                    0.5,1,0.5]; % 1st row = red; 2nd = gray; 3rd = blue
+            colormap(cmap);
+        elseif (colorState == 1)
+            colorState = 2;
+            cmap = [0.9,0.9,0.9;...
+                    0.5,1,0.5;...
+                    1,0.5,0.5]; % 1st row = red; 2nd = gray; 3rd = blue
+            colormap(cmap);
+        end
+        
+        
+    
+    
+        imagesc(xRange,yRange,occGrid);
+        drawnow; % update grid
     end
 end
 
