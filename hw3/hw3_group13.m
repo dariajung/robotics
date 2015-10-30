@@ -12,6 +12,19 @@
 % Daria Jung (djj2115)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+
+
+
+% TO DO
+
+- stopping after certain time
+- if red, turn, figure out if logic ok
+- take into account robot width
+- random turn into its own function
+- spiral in the beginning
+
+
+
 % main function 
 function hw3_team_13(serPort, goalDistance)
     
@@ -19,18 +32,22 @@ function hw3_team_13(serPort, goalDistance)
     % -1 (grey) = not visited
     % 0 (green) = visited, no obstacle
     % 1 (red) = visited, obstacle
+    GREY = -1;
     GREEN = 0;
     RED = 1;
     colorState = 0;
     
     occFig = figure;
     
-    xRange = [-10 10];
-    yRange = [-10 10];
+    gridSize = double(13.5/36);
+    gridRange = 20;
+    
+    xRange = [-gridRange gridRange];
+    yRange = [-gridRange gridRange];
     xlim(xRange);
     ylim(yRange);
     
-    occGrid = zeros(20,20);
+    occGrid = zeros(2*gridRange, 2*gridRange);
     occGrid(:,:) = -1; % all grey
     
     cmap = [0.9,0.9,0.9]; % 1st row = red; 2nd = gray; 3rd = blue
@@ -93,6 +110,18 @@ function hw3_team_13(serPort, goalDistance)
         
         
         
+        if (checkGrid(currentX, currentY) == RED)
+                    
+            newDirection = randomAngle(randi([1 size(randomAngle,2)],1));
+
+            display('alreadyHitObstacle: turning to new direction!------------------------>');
+            display(newDirection);
+
+            turnAngle(serPort, turnVelocity, newDirection);
+            recordAngleTurn();
+
+
+        end
         
         if (state == 0)
             SetFwdVelAngVelCreate(serPort, fwdVelocity, 0); % Move Forward
@@ -117,7 +146,23 @@ function hw3_team_13(serPort, goalDistance)
                 turnAngle(serPort, turnVelocity, 66);
                 recordAngleTurn();
         
-                state = 1;  
+                
+                if (checkGrid(currentX, currentY) ~= RED)
+                    state = 1;
+                else
+                    newDirection = randomAngle(randi([1 size(randomAngle,2)],1));
+                    
+                    display('alreadyHitObstacle: turning to new direction!------------------------>');
+                    display(newDirection);
+                
+                    turnAngle(serPort, turnVelocity, newDirection);
+                    recordAngleTurn();
+                    
+                    
+                end
+                
+                
+                
             else
                 
                 dX = goalX - currentX;
@@ -149,9 +194,9 @@ function hw3_team_13(serPort, goalDistance)
 %             deltaDistance = sqrt(ddX * ddX + ddY * ddY);
             
             
-            disp([' previousX:',num2str(previousX),' previousY:',num2str(previousY),...
-          ' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y),...
-          ' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
+%             disp([' previousX:',num2str(previousX),' previousY:',num2str(previousY),...
+%           ' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y),...
+%           ' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
 
       
       
@@ -159,6 +204,8 @@ function hw3_team_13(serPort, goalDistance)
                 %display('back to where it started -- STUCK!'); % state = 2
                 
                 newDirection = randomAngle(randi([1 size(randomAngle,2)],1));
+                display('followWall: turning to new direction!------------------------>');
+                display(newDirection);
                 turnAngle(serPort, turnVelocity, newDirection);
                 recordAngleTurn();
                 
@@ -260,14 +307,14 @@ function hw3_team_13(serPort, goalDistance)
             
             % check if back to origin, or on m-line
             if (outOfMargin) 
-                display('---------------------------->OUT OF MARGIN');
+%                 display('---------------------------->OUT OF MARGIN');
                 if (abs(delta_y) < 0.05 && m_line == 1)
                     %%% on the m-line %%%
                     stopRobot();
                     return;
                 end
                 
-                if (abs(delta_x) < 0.05 && abs(delta_y) < 0.05)
+                if (abs(delta_x) < 0.08 && abs(delta_y) < 0.08)
                     %%%% back to the original spot %%%%
                     stopRobot();
                     return;
@@ -291,9 +338,9 @@ function hw3_team_13(serPort, goalDistance)
       currentX = currentX + distance * cos(currentA);
       currentY = currentY + distance * sin(currentA);
 
-      disp(['currentA:',num2str(180 * currentA/pi),...
-          ' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y),...
-          ' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
+%       disp(['currentA:',num2str(180 * currentA/pi),...
+%           ' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y),...
+%           ' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
 
       %total_offset = power(delta_x, 2) + power(delta_y, 2);
       %display(['total_offset: ', num2str(total_offset)]);
@@ -308,19 +355,33 @@ function hw3_team_13(serPort, goalDistance)
         SetFwdVelRadiusRoomba(serPort, 0, inf); % Stop the Robot
     end
 
+    function gridVal = checkGrid(c,r)
+        c = round(c/ gridSize);
+        r = round(r/ gridSize);
+      
+        c = c + gridRange;
+        r = gridRange - r;
+        
+        gridVal = occGrid(r,c);
+        
+    end
     function updateGrid(c,r,value)
 %         display(value);
         
-        c = round(c + 1);
-        r = round(r + 1);
+        c = round(c/ gridSize);
+        r = round(r/ gridSize);
       
         
-        c = c + 10;
-        r = 10 - r;
+        c = c + gridRange;
+        r = gridRange - r;
+        
         
         
         figure(occFig);
-        occGrid(r,c) = value;
+        
+        if (occGrid(r,c) == -1)
+            occGrid(r,c) = value;
+        end
         
         if (value == GREEN && colorState == 0)
             colorState = 1;
