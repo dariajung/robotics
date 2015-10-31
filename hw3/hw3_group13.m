@@ -2,7 +2,19 @@
 % COMS W4733 Computational Aspects of Robotics 2015
 %
 % Homework 3
-% Program works in both simulator and real-life.
+% 
+% Robot starts by spiraling until it hits an obstacle.
+% Wall follows obstacle, and when it returns to the original
+% hit point, it chooses a random angle to continue moving.
+%
+% We stop the robot if it has not seen a new grey grid spot
+% in 1 minute.
+%
+% GRID COLORS
+% ====================================
+% GREY - UNVISITED
+% GREEN - VISITED and UNOCCUPIED
+% RED - OCCUPIED BY OBSTACLE OR WALL
 %
 % Team number: 13
 % Team leader: Daria Jung (djj2115)
@@ -12,21 +24,8 @@
 % Daria Jung (djj2115)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-
-
-
-% TO DO
-
-% - stopping after certain time
-% - if red, turn, figure out if logic ok
-% - take into account robot width
-% - random turn into its own function
-% - spiral in the beginning
-
-
-
 % main function 
-function hw3_group13(serPort, goalDistance)
+function hw3_group13(serPort)
 
     simulator_p = properties(serPort);
     
@@ -34,21 +33,34 @@ function hw3_group13(serPort, goalDistance)
     leftTurn = 0;
     frontTurn = 0;
 
-    % simulator %
+    % SET TURN ANGLES %
+    
+    %%%%%%%%%%%%%
+    % SIMULATOR
+    %%%%%%%%%%%%%
     if size(simulator_p,1) == 0
         rightTurn = 5;
         leftTurn = -5;
-        frontTurn =25;
+        frontTurn =25;  
+    %%%%%%%%%%%%%
+    % REAL
+    %%%%%%%%%%%%%
     else
         rightTurn = 20;
         leftTurn = -20;
         frontTurn = 40;
     end
     
+    %%% SPIRAL VARIABLES %%%
+    time_period = 0.3;
+    radius_multiplier = 0;
+    
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % INIT OCCUPANCY GRID
     % -1 (grey) = not visited
     % 0 (green) = visited, no obstacle
     % 1 (red) = visited, obstacle
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     GREY = -1;
     GREEN = 0;
     RED = 1;
@@ -65,10 +77,10 @@ function hw3_group13(serPort, goalDistance)
     xlim(xRange);
     ylim(yRange);
     
-    occGrid = zeros(2*gridRange, 2*gridRange);
-    occGrid(:,:) = -1; % all grey
+    occGrid = zeros(2*gridRange, 2 * gridRange);
+    occGrid(:,:) = -1; % all grey (unvisited) %
     
-    cmap = [0.9,0.9,0.9]; % 1st row = red; 2nd = gray; 3rd = blue
+    cmap = [0.9,0.9,0.9]; % 1st row = red; 2nd = gray; 3rd = blue %
     colormap(cmap);
     
     imagesc(xRange,yRange,occGrid);
@@ -79,29 +91,27 @@ function hw3_group13(serPort, goalDistance)
     
     quit = false;
     
-    % random angles to choose from
+    % random angles to choose from %
     randomAngle = 20:10:80;
-
-    %fig1 = figure('Name','robot path'); % draw robot path
-    %close(fig1);
-    
-    
-%     axes('XLim', [-2 6], 'YLim', [-4 4]);
-
-    
     
     goalX = 4;
     goalY = 0;
     
     % Read Bumpers, call ONCE at beginning, resets readings
     BumpsWheelDropsSensorsRoomba(serPort);
-    WallSensorReadRoomba(serPort);      % Read Wall Sensor, Requires WallsSensorReadRoomba file
+    
+    % Read Wall Sensor, Requires WallsSensorReadRoomba file
+    WallSensorReadRoomba(serPort);      
     
     % Initialize variables keeping track of distance travelled by roomba                                
     currentX = 0;
     currentY = 0;   
     
+    % time for stopping robot if no new grid positions recorded
     timeStart = tic;
+    
+    % time start for spiral
+    tStart = timeStart;
     
     currentA = 0;
     previousA = 0;
@@ -120,22 +130,33 @@ function hw3_group13(serPort, goalDistance)
     turnVelocity = 0.1;
     
     prevGrid = [0, 0];
-   
+    
+    spiralCalled = false;
 
     % robot hit wall, reset sensors to start measuring change
     DistanceSensorRoomba(serPort);
     AngleSensorRoomba(serPort);
     
     % STARTING ROBOT
-    state = 0; % going straight
+    state = 0;  % going straight
                 % state = 1; following wall
                 
     while 1
         
         if (state == 0)
-            SetFwdVelAngVelCreate(serPort, fwdVelocity, 0); % Move Forward
+                       
+            %%%%%%%%%
+            % SPIRAL
+            %%%%%%%%%
+            if (spiralCalled == false)
+                SetFwdVelRadiusRoomba(serPort, 0.2, 0.25 + 0.25 * radius_multiplier)
+                spiral(); 
+                spiralCalled = true;
+            else 
+                SetFwdVelAngVelCreate(serPort, fwdVelocity, 0); % Move Forward
+            end
             
-            [BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+            [BumpRight, BumpLeft, ~, ~, ~, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
             if (BumpRight || BumpLeft || BumpFront)
             
                 stopRobot();
@@ -144,36 +165,48 @@ function hw3_group13(serPort, goalDistance)
                 previousX = currentX;
                 previousY = currentY;
 
-                % orient to wall
+                %%%%%%%%%%%%%%%%%%
+                % orient to wall %
+                %%%%%%%%%%%%%%%%%%
                 travelDist(serPort, 0.05, -0.015); % move back from wall a bit initially
+                
+                %%%%%%%%%%%%%
+                % SIMULATOR
+                %%%%%%%%%%%%%
                 if size(simulator_p,1) == 0
-                    % SIMULATOR
                     while (~WallSensorReadRoomba(serPort))
                         turnAngle(serPort, turnVelocity, 2);
                         recordAngleTurn();
-
-                        if size(simulator_p,1) == 0
-                            % running in the simulator
-                            pause(0.1);
-                        end
+                      
+                        pause(0.1);
                     end
                     turnAngle(serPort, turnVelocity, 66);
-                else % real-life
+                    
+                %%%%%%%%%%%%%
+                % REAL
+                %%%%%%%%%%%%%
+                else
                     turnAngle(serPort, turnVelocity, 90);
                 end
-                recordAngleTurn();
                 
+                recordAngleTurn();
                 
                 if (checkGrid(currentX, currentY, 'front') ~= RED)
                     state = 1;
-                    % updateGrid(currentX, currentY, RED, 'front', true)
+                    %%% DJ %%%
+                    updateGrid(currentX, currentY, RED, 'front', true)
                 else
                     
                     newDirection = randomAngle(randi([1 size(randomAngle,2)],1));
                     if (BumpLeft)
                         newDirection = -1 * newDirection;
+                        display('bumpleft random turn ----------------------------------->');
+                        display(newDirection)
                     elseif (BumpFront)
-                        newDirection = newDirection + 90;
+                        display('bump front random turn ----------------------------------->');
+                        display(newDirection);
+                        turnAngle(serPort, turnVelocity, 75);
+                        recordAngleTurn();
                     end
                     
                     display('alreadyHitObstacle: turning to new direction!------------------------>');
@@ -181,53 +214,23 @@ function hw3_group13(serPort, goalDistance)
                 
                     turnAngle(serPort, turnVelocity, newDirection);
                     recordAngleTurn();
+                  
             
                 end        
-                
-%             else
-%                 
-%                 dX = goalX - currentX;
-%                 dY = goalY - currentY;
-%                 distanceFromGoal = sqrt(dX * dX + dY + dY);
-%                 if (distanceFromGoal < 0.05)
-%                     display('reached goal');
-%                     state = 2;
-%                 end
-%                 
-%                 
             end
         end
         
+        
+        %%%%%%%%%%%%%%%%%%%%
+        % FOLLOW WALL STATE
+        %%%%%%%%%%%%%%%%%%%%
         if (state == 1)
             followWall(0);
             if (quit == true) 
                 display('=======================> EXITING PROGRAM <========================')
                 return;
             end
-            
-%             pdX = goalX - previousX;
-%             pdY = goalY - previousY;
-%             previousDistance = sqrt(pdX * pdX + pdY * pdY);
-%             
-%             cdX = goalX - currentX;
-%             cdY = goalY - currentY;
-%             currentDistance = sqrt(cdX * cdX + cdY * cdY);
-%             
-%             
-%             ddX = currentX - previousX;
-%             ddY = currentY - previousY;
-%             deltaDistance = sqrt(ddX * ddX + ddY * ddY);
-            
-            
-%             disp([' previousX:',num2str(previousX),' previousY:',num2str(previousY),...
-%           ' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y),...
-%           ' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
-
-      
-      
-%             if (deltaDistance < 0.1)
-                %display('back to where it started -- STUCK!'); % state = 2
-                
+                      
             newDirection = randomAngle(randi([1 size(randomAngle,2)],1));
             display('followWall: turning to new direction!------------------------>');
             display(newDirection);
@@ -235,24 +238,6 @@ function hw3_group13(serPort, goalDistance)
             recordAngleTurn();
 
             state = 0;
-                
-%             elseif (currentDistance < previousDistance && previousDistance > deltaDistance)
-%                 % we got closer!
-%                 display('got closer!');
-%                 
-%                 
-%                 reorientAngle = -(currentA - previousA);
-%                 reorientDegrees = 180 * reorientAngle / pi;
-%                 display(reorientDegrees);
-%                 turnAngle(serPort, turnVelocity, reorientDegrees);
-%                 recordAngleTurn();
-%                 
-%                 
-%                 state = 0;
-%             else
-%                 display('got farther!');
-%                 state = 1;
-%             end
 
         end
         
@@ -263,20 +248,12 @@ function hw3_group13(serPort, goalDistance)
             return;
         end
             
-            
-            
-            
-            
-            
-         
-        
-
-        
-        % dStart = mapRobot(dStart,drawInterval,fig1, currentX, currentY, currentA);
-
         recordRobotTravel(GREEN, 'front'); % update distance traveled
+        
+        %%%%%%%%%%%%%
+        % SIMULATOR
+        %%%%%%%%%%%%%
         if size(simulator_p,1) == 0
-            % running in the simulator
             pause(0.1);
         end
         
@@ -285,14 +262,8 @@ function hw3_group13(serPort, goalDistance)
             return;
         end
 
-
     end
-    
-    
-    
-    
-    
-    
+
     
     % 0 means no goal, return at start, else on m line
     function followWall(m_line)
@@ -308,7 +279,7 @@ function hw3_group13(serPort, goalDistance)
 
         outOfMargin = 0;
         while 1
-            [BumpRight, BumpLeft, WheelDropRight, WheelDropLeft, WheelDropCastor, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+            [BumpRight, BumpLeft, ~, ~, ~, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
             
             if (BumpRight)
                 turnAngle(serPort, turnVelocity, rightTurn);
@@ -343,7 +314,7 @@ function hw3_group13(serPort, goalDistance)
             
             % check if back to origin, or on m-line
             if (outOfMargin) 
-%                 display('---------------------------->OUT OF MARGIN');
+                % display('---------------------------->OUT OF MARGIN');
                 if (abs(delta_y) < 0.05 && m_line == 1)
                     %%% on the m-line %%%
                     stopRobot();
@@ -357,10 +328,13 @@ function hw3_group13(serPort, goalDistance)
                 end
                 
             end
+            %%%%%%%%%%%%%
+            % SIMULATOR
+            %%%%%%%%%%%%%
             if size(simulator_p,1) == 0
-                % running in the simulator
                 pause(0.1);
             end
+            
             [c,r] = calculateGrid(currentX,currentY,'side');
             display('previous grid...................................');
             display(prevGrid);
@@ -401,9 +375,11 @@ function hw3_group13(serPort, goalDistance)
       
       
       % if following wall, set side grid to red and current grid to green
-      if (strcmp(robotOffset, 'side'))
-         % updateGrid(currentX,currentY,GREEN, 'center', false);
-      end
+%       if (strcmp(robotOffset, 'side'))
+%          updateGrid(currentX,currentY,GREEN, 'center', false);
+%       end
+
+
       updateGrid(currentX,currentY,gridColor, robotOffset, false);
     end
 
@@ -438,7 +414,6 @@ function hw3_group13(serPort, goalDistance)
     end
 
     function updateGrid(c, r, value, robotOffset, force)
-%         display(value);
 
         figure(occFig);
         hold on;
@@ -485,6 +460,40 @@ function hw3_group13(serPort, goalDistance)
         plot(c, r, '.b');
         drawnow;
                
+    end
+
+
+    function spiral() 
+        [BumpRight, BumpLeft, ~, ~, ~, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+        % initial state: while not bump, spiral until encounter first obstacle
+        while (~BumpRight && ~BumpLeft && ~BumpFront)        
+            if toc(tStart) > time_period
+            	recordRobotTravel(GREEN, 'front'); % update distance traveled
+            end
+            
+            current_degrees = currentA * 180 / pi;
+
+            display(current_degrees) 
+            display(radius_multiplier)
+
+            if ((current_degrees < 0) && (current_degrees > -5.0))           
+                % make spiraling radius larger
+                if radius_incremented == false
+                    radius_multiplier = radius_multiplier + 1;
+                    SetFwdVelRadiusRoomba(serPort, 0.1, 0.25 + 0.25 * radius_multiplier)
+                    radius_incremented = true;
+                end
+            else 
+                radius_incremented = false;
+
+            end
+
+            if size(simulator_p,1) == 0
+                pause(0.1);
+            end
+            
+            [BumpRight, BumpLeft, ~, ~, ~, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
+        end
     end
 end
 
