@@ -25,7 +25,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % main function 
-function hw3_group13(serPort)
+function hw3_group_13(serPort)
 
     simulator_p = properties(serPort);
     
@@ -364,21 +364,6 @@ function hw3_group13(serPort)
 
       currentX = currentX + distance * cos(currentA);
       currentY = currentY + distance * sin(currentA);
-      
-
-%       disp(['currentA:',num2str(180 * currentA/pi),...
-%           ' delta_x:',num2str(delta_x),' delta_y:',num2str(delta_y),...
-%           ' currentX:',num2str(currentX),' currentY:',num2str(currentY)]);
-
-      %total_offset = power(delta_x, 2) + power(delta_y, 2);
-      %display(['total_offset: ', num2str(total_offset)]);
-      
-      
-      % if following wall, set side grid to red and current grid to green
-%       if (strcmp(robotOffset, 'side'))
-%          updateGrid(currentX,currentY,GREEN, 'center', false);
-%       end
-
 
       updateGrid(currentX,currentY,gridColor, robotOffset, false);
     end
@@ -497,11 +482,3 @@ function hw3_group13(serPort)
     end
 end
 
-% TODO:
-% 
-%     if reaches 0 again its inside a closed obstacle, exit report stuck
-%         
-% robot simulator keeps curving up, how to reorient back down if no
-% obstacles?
-% if goal is inside obstacle?
-% instead of if theta > 0 theta or small number
