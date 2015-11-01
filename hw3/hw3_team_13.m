@@ -25,7 +25,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % main function 
-function hw3_group_13(serPort)
+function hw3_team_13(serPort)
 
     simulator_p = properties(serPort);
     
