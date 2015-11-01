@@ -69,7 +69,7 @@ function hw3_group_13(serPort)
     occFig = figure;
     
     gridSize = double(13.5/36);
-    robotRadius = (13.5/2)/36;
+    robotRadius = (13.8/2)/36; %13.8 inches (a bit extra for error)
     gridRange = 20;
     
     xRange = [-gridRange gridRange];
@@ -77,8 +77,8 @@ function hw3_group_13(serPort)
     xlim(xRange);
     ylim(yRange);
     
-    occGrid = zeros(2*gridRange, 2 * gridRange);
-    occGrid(:,:) = -1; % all grey (unvisited) %
+    occGrid = zeros(2*gridRange, 2*gridRange);
+    occGrid(:,:) = GREY; % all grey (unvisited) %
     
     cmap = [0.9,0.9,0.9]; % 1st row = red; 2nd = gray; 3rd = blue %
     colormap(cmap);
@@ -114,7 +114,6 @@ function hw3_group_13(serPort)
     tStart = timeStart;
     
     currentA = 0;
-    previousA = 0;
     previousX = 0;
     previousY = 0;
                 
@@ -161,7 +160,6 @@ function hw3_group_13(serPort)
             
                 stopRobot();
 
-                previousA = currentA;
                 previousX = currentX;
                 previousY = currentY;
 
@@ -194,6 +192,8 @@ function hw3_group_13(serPort)
                 if (checkGrid(currentX, currentY, 'front') ~= RED)
                     state = 1;
                     %%% DJ %%%
+                    % bumped into wall, but already set to green, so change
+                    % to red
                     updateGrid(currentX, currentY, RED, 'front', true)
                 else
                     
@@ -304,6 +304,8 @@ function hw3_group_13(serPort)
             end
             
             recordRobotTravel(RED, 'side');
+            %updateGrid(currentX, currentY, GREEN, 'center', false); % set
+            %center to green since currently on that spot?
             
             delta_x = currentX - previousX; % return: total change in x from starting point
             delta_y = currentY - previousY;
@@ -339,6 +341,8 @@ function hw3_group_13(serPort)
             display('previous grid...................................');
             display(prevGrid);
             display([c,r]);
+            
+            % wall following but it's a wall we've already seen so break
             if (checkGrid(currentX, currentY, 'side') == RED && prevGrid(1) ~= c && prevGrid(2) ~= r)
                 break;
             end
@@ -382,7 +386,6 @@ function hw3_group_13(serPort)
         if (strcmp(robotOffset, 'front'))
             c = c + robotRadius*cos(currentA);
             r = r + robotRadius*sin(currentA);
-            
         elseif (strcmp(robotOffset,'side'))
             c = c + robotRadius*cos(currentA - pi/2);
             r = r + robotRadius*sin(currentA - pi/2);
@@ -402,23 +405,8 @@ function hw3_group_13(serPort)
 
         figure(occFig);
         hold on;
-        
-        if (strcmp(robotOffset, 'front'))
-            c = c + robotRadius*cos(currentA);
-            r = r + robotRadius*sin(currentA);
-            
-        elseif (strcmp(robotOffset,'side'))
-            c = c + robotRadius*cos(currentA - pi/2);
-            r = r + robotRadius*sin(currentA - pi/2);
-        end
-        
-        c = round(c/ gridSize);
-        r = round(r/ gridSize);
-      
-        
-        c = c + gridRange;
-        r = gridRange - r;
-    
+        [c, r] = calculateGrid(c, r, robotOffset);
+
         if (occGrid(r,c) == -1 || force == true)
             occGrid(r,c) = value;
             prevGrid(1) = c;
@@ -426,24 +414,23 @@ function hw3_group_13(serPort)
             timeStart = tic;
         end
         
-        if (value == GREEN && colorState == 0)
+        if (colorState == 0 && value == GREEN)
             colorState = 1;
             cmap = [0.9,0.9,0.9;...
                     0.5,1,0.5]; % 1st row = red; 2nd = gray; 3rd = blue
             colormap(cmap);
-        elseif (colorState == 1)
+        elseif (colorState == 1 && value == RED)
             colorState = 2;
             cmap = [0.9,0.9,0.9;...
                     0.5,1,0.5;...
                     1,0.5,0.5]; % 1st row = red; 2nd = gray; 3rd = blue
             colormap(cmap);
         end
-        
-       
+
         imagesc(xRange,yRange,occGrid);
         drawnow; % update grid
-        plot(c, r, '.b');
-        drawnow;
+        %plot(c, r, '.b');
+        %drawnow;
                
     end
 
@@ -465,7 +452,7 @@ function hw3_group_13(serPort)
                 % make spiraling radius larger
                 if radius_incremented == false
                     radius_multiplier = radius_multiplier + 1;
-                    SetFwdVelRadiusRoomba(serPort, 0.1, 0.25 + 0.25 * radius_multiplier)
+                    SetFwdVelRadiusRoomba(serPort, 0.1, 0.25 + 0.3 * radius_multiplier)
                     radius_incremented = true;
                 end
             else 
