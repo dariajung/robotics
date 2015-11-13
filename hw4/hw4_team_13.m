@@ -1,10 +1,13 @@
 %  COMS W4733 Computational Aspects of Robotics 2015
 
-function hw4_team_13(serPort, worldFile, startGoal) 
+function hw4_team_13(serPort, worldFile, sgFile) 
 
     robotDiameter = 0.35;
 
     [wall, obstacles] = readWorldFile(worldFile);
+    [start, goal] = readStartGoal(sgFile);
+    
+    display([start, goal]);
     
     % Plotting for visual verification
     plotObject(wall, 0, 0.8, 1);
@@ -19,7 +22,26 @@ function hw4_team_13(serPort, worldFile, startGoal)
         plotObject(grownObstacles{1, i}, 1, 0, 0);
     end
     
-    celldisp(grownObstacles);
+%     celldisp(grownObstacles);
+end
+
+function [start, goal] = readStartGoal(file)
+    try
+        fid = fopen(file, 'r');
+        line = fgets(fid);
+        
+        start_0 = strsplit(line);
+        line = fgets(fid);
+        goal_0 = strsplit(line);
+        
+        start = [str2double(start_0(1)),str2double(start_0(2))];
+        goal = [str2double(goal_0(1)),str2double(goal_0(2))];
+      
+    catch
+        display('Couldn''t open start_goal file')
+        start = [0,0];
+        goal = [0,0];
+    end
 end
 
 % first integer gives you the number of obstacles
@@ -90,11 +112,11 @@ function plotObject(object, r, g, b)
         prev_y = y;
     end
 
-    line([prev_x, object(1, 1)], [prev_y, object(1,2)], 'LineWidth', 1, 'Color', [0, 0.8, 1]);
+    line([prev_x, object(1, 1)], [prev_y, object(1,2)], 'LineWidth', 1, 'Color', [r, g, b]);
 
 end
 
-function tempMat = growObstacle(obstacle, robotDiameter)
+function bigObstacle = growObstacle(obstacle, robotDiameter)
     [r,c] = size(obstacle);
     tempMat = zeros(r*4,c);
     
@@ -113,6 +135,18 @@ function tempMat = growObstacle(obstacle, robotDiameter)
         
         tempMat(4*(i - 1) + 4, 1) = x + robotDiameter;
         tempMat(4*(i - 1) + 4, 2) = y;
-    end   
+    end
+        
+    k = convhull(tempMat(:,1), tempMat(:,2));
+    
+    bigObstacle = zeros(size(k, 1) - 1, 2);
+    
+    for j = 1:size(bigObstacle)
+        bigObstacle(j,1) = tempMat(k(j),1);
+        bigObstacle(j,2) = tempMat(k(j),2);
+    end
+    
+%     display(tempMat(:,1))
+%     display(tempMat(:,2))
 end
 
