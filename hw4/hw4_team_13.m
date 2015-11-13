@@ -3,10 +3,16 @@
 function hw4_team_13(serPort, worldFile, startGoal) 
     
     [wall, obstacles] = readWorldFile(worldFile);
+    
+    plotObject(wall);
+    
+    for i = 1:size(obstacles, 2)
+        plotObject(obstacles{i});
+    end
+    
     display(wall)
     celldisp(obstacles)
 end
-
 
 % first integer gives you the number of obstacles
 % for each obstacle:
@@ -58,5 +64,25 @@ function obstacle = readObstacle(file)
         obstacle(i,:) = [str2double(vertex(1)), str2double(vertex(2))];
     end
     
+end
+
+% Passing in a matrix to plot
+function plotObject(object) 
+
+    prev_x = object(1, 1);
+    prev_y = object(1, 2);
+    
+    for i = 2:size(object, 1)
+        x = object(i, 1);
+        y = object(i, 2);
+        
+        line([prev_x, x], [prev_y, y], 'LineWidth', 1, 'Color', [0, 0.8, 1]);
+        
+        prev_x = x;
+        prev_y = y;
+    end
+
+    line([prev_x, object(1, 1)], [prev_y, object(1,2)], 'LineWidth', 1, 'Color', [0, 0.8, 1]);
+
 end
 
