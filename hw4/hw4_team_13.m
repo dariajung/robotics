@@ -1,17 +1,25 @@
 %  COMS W4733 Computational Aspects of Robotics 2015
 
 function hw4_team_13(serPort, worldFile, startGoal) 
-    
+
+    robotDiameter = 0.35;
+
     [wall, obstacles] = readWorldFile(worldFile);
     
-    plotObject(wall);
+    % Plotting for visual verification
+    plotObject(wall, 0, 0.8, 1);
     
+    grownObstacles = cell(1, size(obstacles, 1));
+        
     for i = 1:size(obstacles, 2)
-        plotObject(obstacles{i});
+        plotObject(obstacles{i}, 0, 0.8,1);
+        % call Grow function here
+        grownObstacles{1, i} = growObstacle(obstacles{i}, robotDiameter);
+        
+        plotObject(grownObstacles{1, i}, 1, 0, 0);
     end
     
-    display(wall)
-    celldisp(obstacles)
+    celldisp(grownObstacles);
 end
 
 % first integer gives you the number of obstacles
@@ -67,7 +75,7 @@ function obstacle = readObstacle(file)
 end
 
 % Passing in a matrix to plot
-function plotObject(object) 
+function plotObject(object, r, g, b) 
 
     prev_x = object(1, 1);
     prev_y = object(1, 2);
@@ -76,7 +84,7 @@ function plotObject(object)
         x = object(i, 1);
         y = object(i, 2);
         
-        line([prev_x, x], [prev_y, y], 'LineWidth', 1, 'Color', [0, 0.8, 1]);
+        line([prev_x, x], [prev_y, y], 'LineWidth', 1, 'Color', [r, g, b]);
         
         prev_x = x;
         prev_y = y;
@@ -84,5 +92,27 @@ function plotObject(object)
 
     line([prev_x, object(1, 1)], [prev_y, object(1,2)], 'LineWidth', 1, 'Color', [0, 0.8, 1]);
 
+end
+
+function tempMat = growObstacle(obstacle, robotDiameter)
+    [r,c] = size(obstacle);
+    tempMat = zeros(r*4,c);
+    
+    for i = 1:size(obstacle, 1)
+        x = obstacle(i, 1);
+        y = obstacle(i, 2);
+        
+        tempMat(4*(i - 1) + 1, 1) = x;
+        tempMat(4*(i - 1) + 1, 2) = y;
+        
+        tempMat(4*(i - 1) + 2, 1) = x;
+        tempMat(4*(i - 1) + 2, 2) = y + robotDiameter;
+        
+        tempMat(4*(i - 1) + 3, 1) = x + robotDiameter;
+        tempMat(4*(i - 1) + 3, 2) = y + robotDiameter;
+        
+        tempMat(4*(i - 1) + 4, 1) = x + robotDiameter;
+        tempMat(4*(i - 1) + 4, 2) = y;
+    end   
 end
 
