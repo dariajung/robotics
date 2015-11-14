@@ -13,16 +13,23 @@ function hw4_team_13(serPort, worldFile, sgFile)
     plotObject(wall, 0, 0.8, 1);
     
     grownObstacles = cell(1, size(obstacles, 1));
+    
+    grown_vertices = 0;
         
     for i = 1:size(obstacles, 2)
         plotObject(obstacles{i}, 0, 0.8,1);
         % call Grow function here
         grownObstacles{1, i} = growObstacle(obstacles{i}, robotDiameter);
+        grown_vertices = grown_vertices + size(grownObstacles{1,i},1);
         
         plotObject(grownObstacles{1, i}, 1, 0, 0);
     end
     
-%     celldisp(grownObstacles);
+    display(grown_vertices);
+    
+    generateVisibilityGraph(start, goal, grownObstacles, wall, grown_vertices);
+    
+	% celldisp(grownObstacles);
 end
 
 function [start, goal] = readStartGoal(file)
@@ -43,6 +50,8 @@ function [start, goal] = readStartGoal(file)
         goal = [0,0];
     end
 end
+
+%% READ IN FILES %%%%
 
 % first integer gives you the number of obstacles
 % for each obstacle:
@@ -96,7 +105,7 @@ function obstacle = readObstacle(file)
     
 end
 
-% Passing in a matrix to plot
+%% PLOT OBJECT %%%%
 function plotObject(object, r, g, b) 
 
     prev_x = object(1, 1);
@@ -115,6 +124,17 @@ function plotObject(object, r, g, b)
     line([prev_x, object(1, 1)], [prev_y, object(1,2)], 'LineWidth', 1, 'Color', [r, g, b]);
 
 end
+
+function plotEdge(object, r, g, b) 
+
+   for i = 1:size(object,1)
+       line([object(i,1), object(i,3)], [object(i, 2), object(i, 4)], 'LineWidth', 1, 'Color', [r, g, b]);
+   end
+
+end
+
+
+%% GROW OBSTACLE %%%%%%%
 
 function bigObstacle = growObstacle(obstacle, robotDiameter)
     [r,c] = size(obstacle);
@@ -137,7 +157,7 @@ function bigObstacle = growObstacle(obstacle, robotDiameter)
         tempMat(4*(i - 1) + 4, 2) = y;
     end
         
-    k = convhull(tempMat(:,1), tempMat(:,2));
+    k = convhull(tempMat(:,1), tempMat(:,2), 'simplify', true);
     
     bigObstacle = zeros(size(k, 1) - 1, 2);
     
@@ -150,3 +170,89 @@ function bigObstacle = growObstacle(obstacle, robotDiameter)
 %     display(tempMat(:,2))
 end
 
+%% VISIBILITY GRAPH %%%%%
+
+function [obstacle_edges] = getObstacleEdges(obstacle)
+    % Each row is x1y1, x2y2 which forms an edge pair
+    obstacle_edges = zeros(size(obstacle, 1), 4);
+
+    prev_x = obstacle(1, 1);
+    prev_y = obstacle(1, 2);
+    
+    for i = 2:size(obstacle, 1)
+        x = obstacle(i, 1);
+        y = obstacle(i, 2);
+        
+        % line([prev_x, x], [prev_y, y], 'LineWidth', 1, 'Color', [r, g, b]);
+        
+        % store edge
+        obstacle_edges(i, 1) = prev_x;
+        obstacle_edges(i, 2) = prev_y;
+        obstacle_edges(i, 3) = x;
+        obstacle_edges(i, 4) = y;
+        
+        
+        prev_x = x;
+        prev_y = y;
+    end
+    
+    obstacle_edges(1, 1) = x;
+    obstacle_edges(1, 2) = y;
+    obstacle_edges(1, 3) = obstacle(1, 1);
+    obstacle_edges(1, 4) = obstacle(1, 2);
+
+end
+
+function [verticies, edges] = generateVisibilityGraph(start, goal, obstacles, wall, total_obst_verticies)
+    % first, generate all possible edges between obstacles
+    % second, generate all edges of the wall
+    
+    obst_edges = [];
+    
+    for i = 1:size(obstacles, 2)
+        temp = getObstacleEdges(obstacles{1, i});
+        obst_edges = vertcat(obst_edges, temp);
+        plotEdge(temp, 0, 1, 0);
+    end
+    
+    wall_edges = getObstacleEdges(wall);
+    plotEdge(wall_edges, 0, 1, 0);
+   
+%     display(obst_edges)
+%     display(size(obst_edges))
+
+    % go through all obstacles
+    for i = 1:size(obstacles, 2)
+        obst = obstacles{1, i};
+        
+        % go through each vertex in an obstacle
+        for j = 1:size(obst, 1)
+            display(obst(j, 1));
+            display(obst(j, 2));
+            
+            % go through next obstacle
+            for k = (i+1):size(obstacles, 2)
+                obst2 = obstacles{1, k};
+
+                % go through each vertex in an obstacle
+                for l = 1:size(obst2, 1)
+                    display(obst2(l, 1));
+                    display(obst2(l, 2));
+                    
+                    temp_edge = [obst(j, 1), obst(j, 2), obst2(l, 1), obst2(l, 2)]
+                    
+                    obst_edges = vertcat(obst_edges, temp_edge);
+                end
+            end
+        end
+    end
+    
+    display(size(obst_edges, 1));
+    
+    plotEdge(obst_edges, 0, 1, 0);
+    
+    
+    verticies = [];
+    edges = [];
+
+end
