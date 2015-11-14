@@ -306,7 +306,7 @@ function [verticies, edges] = generateVisibilityGraph(start, goal, obstacles, wa
             end
             
             [x, y] = computeIntersection(m1, b1, m2, b2);
-            display([x, y]);
+            %display([x, y]);
             if (~isnan(x) && ~isnan(y))
                 plot(x, y, 'Marker','o','MarkerFaceColor','red','MarkerSize',6);
             end
@@ -320,15 +320,20 @@ function [verticies, edges] = generateVisibilityGraph(start, goal, obstacles, wa
 end
 
 %% Point of Intersection %%%%%%%%%%%%
-function [x, y] = computeIntersection(m1, b1, m2, b2)   
+function [x, y] = computeIntersection(m1, b1, m2, b2)  
     if (m1 == m2) 
         x = NaN;
         y = NaN;
-        return;
+    elseif (m1 == inf)
+        x = b1;
+        y = m2 * x + b2;
+    elseif (m2 == inf)
+        x = b2;
+        y = m1 * x + b1;
+    else
+        x = (b2 - b1) / (m1 - m2);
+        y = m1*x + b1;
     end
-    
-    x = (b2 - b1) / (m1 - m2);
-    y = m1*x + b1;
 end
 
 %% Compute line %%%%%%%%%%%%
@@ -338,6 +343,18 @@ function [m, b] = getLine(edge)
     x2 = edge(1,3);
     y2 = edge(1,4);
     
-    m = (y1 - y2) / (x1 - x2);
-    b = y1 - m*x1;
+    dx = x1 - x2;
+    
+    if (dx == 0)
+        % vertical line
+        m = inf;
+        b = x1;
+        
+    else
+        
+        m = (y1 - y2) / dx;
+        b = y1 - m*x1;
+    
+    end
+    display(m);
 end
