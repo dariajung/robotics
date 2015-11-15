@@ -232,8 +232,21 @@ function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
 
     % go through all obstacles (minus wall, start, goal)
     numObstacles = size(original_obstacles, 2)
-    for i = 1:numObstacles
-        obst1 = original_obstacles{1, i};
+    for i = -1:numObstacles
+        startgoal = true;
+        if (i == -1)
+            obst1 = start;
+            display('start point');
+            display(start);
+        elseif (i == 0)
+            obst1 = goal;
+            display('goal point');
+            display(goal);
+        else
+            startgoal = false;
+            obst1 = original_obstacles{1, i};
+        end
+        
         
         % for each vertex of obstacle
         for j = 1:size(obst1, 1)
@@ -241,6 +254,9 @@ function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
             v1_x = obst1(j, 1);
             v1_y = obst1(j, 2);
 
+            if (startgoal == true)
+               display([v1_x v1_y]);
+            end
             % check if vertex inside another obstacle
             
             % check if v1 is inside another obstacle
@@ -257,7 +273,18 @@ function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
             end
             if (isInside == false)
                 % point not inside an obstacle, try to make an edge
-                for k = (i+1):numObstacles
+                if (startgoal == true)
+                   display('trying to make an edge!');
+                end
+                
+                if (i < 1)
+                    startIndex = 1;
+                else
+                    startIndex = i + 1;
+                end
+                
+                
+                for k = startIndex:numObstacles
                     obst2 = original_obstacles{1,k};
                     for l = 1:size(obst2, 1)
                         % each vertex in obstacle 2
@@ -271,13 +298,20 @@ function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
                                 if (in)
                                     isInside2 = true;
                                     plot(v2_x, v2_y, '.r');
+                                    if (startgoal == true)
+                                       display('something is inside');
+                                       display([v2_x, v2_y]);
+                                    end
                                     break;
                                 end
                             end
                         end
                         % can possibly make an edge! (both vertices are not
-                        % inside an obstacle
+                        % inside an obstacle)
                         if (isInside2 == false)
+                            if (startgoal == true)
+                               display('trying to make an edge with obst!');
+                            end
                             temp_edge = [v1_x, v1_y, v2_x, v2_y];
                             
                             %check if this edge intersects any obstacles
@@ -291,7 +325,9 @@ function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
                                 end
                             end
                             
-                            if (interObst == false)
+                            in = intersectObstacle(temp_edge, wall);
+                            
+                            if (interObst == false && in == false)
                                 % edge is safe!
                                 possible_paths = vertcat(possible_paths, temp_edge);
                             end
