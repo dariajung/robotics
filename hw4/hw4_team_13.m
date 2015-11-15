@@ -26,11 +26,11 @@ function hw4_team_13(serPort, worldFile, sgFile)
     end   
     % num_vertices = 37, wall = 16
    
-    generateVisibilityGraph(start, goal, grownObstacles, wall);
+    vgraph = generateVisibilityGraph(start, goal, grownObstacles, wall);
     
-    for i = 1:size(grownObstacles, 2)
+%     for i = 1:size(grownObstacles, 2)
 %         plotObject(grownObstacles{1,i}, 0, 0.8,1);  
-    end
+%     end
     %celldisp(grownObstacles);
 	%display(grownObstacles{1, 1});
 end
@@ -210,7 +210,8 @@ function [obstacle_edges] = getObstacleEdges(obstacle)
     obstacle_edges(1, 4) = obstacle(1, 2);
 end
 
-function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
+% possible_paths, every row is 1x4 x1,y1,x2,y2 represents edge
+function possible_paths = generateVisibilityGraph(start, goal, obstacles, wall)
     % generate just obstacle edges
     original_obstacles = obstacles;
 
@@ -330,14 +331,12 @@ function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
         possible_paths = vertcat(possible_paths, temp);
     end
 %     display(size(obst_edges,1));
-    
-    vgraph = [];
+   
     
     for i = 1:size(possible_paths, 1)
         temp_edge = possible_paths(i,:);
         line([temp_edge(1), temp_edge(3)], [temp_edge(2), temp_edge(4)], 'LineWidth', 1, 'Color', [0, 0, 0]);
     end
-    edges = [];
 end
 
 function b = intersectObstacle(edge, obstacle)
