@@ -7,10 +7,18 @@ function hw4_team_13(serPort, worldFile, sgFile)
     [wall, obstacles] = readWorldFile(worldFile);
     [start, goal] = readStartGoal(sgFile);
     
-    display([start, goal]);
+%     display([start, goal]);
     
     % Plotting for visual verification
     plotObject(wall, 0, 0.8, 1);
+    
+    
+    xmax = max(wall(:,1));
+    ymax = max(wall(:,2));
+    xmin = min(wall(:,1));
+    ymin = min(wall(:,2));
+    
+    wallBounds = [xmin xmax ymin ymax];
     
     hold on;
     
@@ -19,7 +27,7 @@ function hw4_team_13(serPort, worldFile, sgFile)
     grown_vertices = 0;
         
     for i = 1:size(obstacles, 2)
-        plotObject(obstacles{i}, 0, 0.8,1);
+%         plotObject(obstacles{i}, 0, 0.8,1);
         % call Grow function here
         grownObstacles{1, i} = growObstacle(obstacles{i}, robotDiameter);
         grown_vertices = grown_vertices + size(grownObstacles{1,i},1);
@@ -28,9 +36,21 @@ function hw4_team_13(serPort, worldFile, sgFile)
     end
     
     display(grown_vertices);
+    display(size(wall,1));
     
-    generateVisibilityGraph(start, goal, grownObstacles, wall, grown_vertices);
     
+%     [m1, b1] = getLine([2,0,2,5]);
+%     [m2, b2] = getLine([5,0,8,5]);
+%     
+%     [x, y] = computeIntersection(m1, b1, m2, b2);
+%     display([x,y]);
+    
+     generateVisibilityGraph(start, goal, grownObstacles, wall, wallBounds);
+    
+     for i = 1:size(obstacles, 2)
+        plotObject(grownObstacles{1,i}, 0, 0.8,1);
+        
+    end
     %celldisp(grownObstacles);
 	%display(grownObstacles{1, 1});
 end
@@ -219,41 +239,53 @@ function [obstacle_edges] = getObstacleEdges(obstacle)
 
 end
 
-function [verticies, edges] = generateVisibilityGraph(start, goal, obstacles, wall, total_obst_verticies)
+function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall, wallBounds)
+    % generate just obstacle edges
+    original_obstacles = obstacles;
+    obstacles = [obstacles, {wall}];
+    
+    obst_edges = [];
+    for i = 1:size(obstacles, 2)
+        temp = getObstacleEdges(obstacles{1, i});
+        obst_edges = vertcat(obst_edges, temp);
+    end
+
+    display(size(obst_edges,1));
     % first, generate all possible edges between obstacles
     % second, generate all edges of the wall
     
-    obstacles = [obstacles, {start, goal, wall}];
+    obstacles = [obstacles, {start, goal}];
     
-    obst_edges = [];
+    possible_paths = [];
     
     hold on;
     
     for i = 1:size(obstacles, 2)
         temp = getObstacleEdges(obstacles{1, i});
         
-        display(temp);
+%         display(temp);
         
-        obst_edges = vertcat(obst_edges, temp);
+        possible_paths = vertcat(possible_paths, temp);
         plotEdge(temp, 0, 1, 0);
     end
     
 %     wall_edges = getObstacleEdges(wall);
 %     plotEdge(wall_edges, 0, 1, 0);
    
-%     display(obst_edges)
-%     display(size(obst_edges))
+%     display(possible_paths)
+%     display(size(possible_paths))
 
     hold on;
 
+    
     % go through all obstacles
     for i = 1:size(obstacles, 2)
         obst = obstacles{1, i};
         
         % go through each vertex in an obstacle
         for j = 1:size(obst, 1)
-            display(obst(j, 1));
-            display(obst(j, 2));
+%             display(obst(j, 1));
+%             display(obst(j, 2));
             
             % go through next obstacle
             for k = (i+1):size(obstacles, 2)
@@ -261,61 +293,147 @@ function [verticies, edges] = generateVisibilityGraph(start, goal, obstacles, wa
 
                 % go through each vertex in an obstacle
                 for l = 1:size(obst2, 1)
-                    display(obst2(l, 1));
-                    display(obst2(l, 2));
                     
-                    temp_edge = [obst(j, 1), obst(j, 2), obst2(l, 1), obst2(l, 2)]
+                    temp_edge = [obst(j, 1), obst(j, 2), obst2(l, 1), obst2(l, 2)];
                     
-                    obst_edges = vertcat(obst_edges, temp_edge);
+                    possible_paths = vertcat(possible_paths, temp_edge);
                 end
             end
         end
     end
     
-    display(size(obst_edges, 1)); 
-    plotEdge(obst_edges, 0, 1, 0);
+    display(size(possible_paths, 1)); 
+%     plotEdge(possible_paths, 0, 1, 0);
     
     mapObj = containers.Map;
     
-    for i = 1:size(obst_edges, 1)
+    vgraph = [];
+    
+    for i = 1:size(possible_paths, 1)
+        
+        edge1 = possible_paths(i,:);
+        
+        intersect = false;
         for j = 1:size(obst_edges, 1)
-            if (obst_edges(i,:) == obst_edges(j,:))
+            if (possible_paths(i,:) == obst_edges(j,:))
                 continue;
             end
-            edge1 = obst_edges(i,:);
-            edge2 = obst_edges(j,:);
             
-            if (isKey(mapObj, (mat2str(edge1))))
-                mb1 = mapObj(mat2str(edge1));
-                m1 = mb1(1);
-                b1 = mb1(2);
-                
-            else
-                [m1, b1] = getLine(edge1);
-                mapObj(mat2str(edge1)) = [m1, b1];
-            end
-       
+            intersect = intersectObstacle(edge1, original_obstacles);
             
-            if (isKey(mapObj, (mat2str(edge2))))
-                mb2 = mapObj(mat2str(edge2));
-                m2 = mb2(1);
-                b2 = mb2(2);
-            else
-                [m2, b2] = getLine(edge2);
-                mapObj(mat2str(edge2)) = [m2, b2];
+            if (intersect == true)
+                break;
             end
             
-            [x, y] = computeIntersection(m1, b1, m2, b2);
-            %display([x, y]);
-            if (~isnan(x) && ~isnan(y))
-                plot(x, y, 'Marker','o','MarkerFaceColor','red','MarkerSize',6);
+            intersect = insideObstacle(edge1, original_obstacles);
+            if (intersect == true)
+                break;
             end
+
+
+        end
+        
+        if (intersect == false)
+            line([edge1(1), edge1(3)], [edge1(2), edge1(4)], 'LineWidth', 1, 'Color', [0, 0, 0]);
+%             pause(0.2);
         end
     end
     
     
-    verticies = [];
+    
     edges = [];
+
+end
+
+function b = intersectObstacle(edge, obstacles)
+
+    obstacle_edges = {};
+    
+    for i = 1:size(obstacle_edges)
+        obstacle_edges = [obstacle_edges, {getObstacleEdges(obstacles{1, i})}];
+    end
+    
+    b = false;
+
+    for i=1:size(obstacle_edges)    
+        obstacle = obstacle_edges(i);
+        
+        % goes through edges of obstacle
+        for j=1:size(obstacle);
+            if (isequal(edge, obstacle(j))) 
+                continue;
+            end
+            
+            b = isIntersect([0,0], edge, obstacle(j));
+            
+            if (b == true)
+                return;
+            end
+
+        end
+    end
+
+end
+
+
+function b = insideObstacle(edge, obstacles)
+
+    for i=1:size(obstacles, 2)
+        [in,on] = inpolygon(edge(:,1),edge(:,2),obstacles{1,i}(:,1),obstacles{1,i}(:,2));
+        
+        b = in && ~on;
+%         display(inside);
+        if (b == true)
+%             b = true;
+            return;
+        end
+    end
+    b = false;
+
+end
+function [p,b] = isIntersect(point, edge1, edge2)
+
+%     x = point(1);
+%     y = point(2);
+    
+    p1 = [edge1(1),edge1(2)];
+    p2 = [edge1(3),edge1(4)];
+    p3 = [edge2(1),edge2(2)];
+    p4 = [edge2(3),edge2(4)];
+    
+    
+    if (isequal(p1, p3) || isequal(p1, p4))
+        b = false;
+        p = p1;
+        return;
+    end
+    if (isequal(p2, p3) || isequal(p2, p4))
+        b = false;
+        p = p2;
+        return;
+    end
+    
+    [m1, b1] = getLine(edge1);
+    [m2, b2] = getLine(edge2);
+    
+    [px, py] = computeIntersection(m1, b1, m2, b2);
+    if (isnan(px) && isnan(py))
+        b = false;
+        p = [inf, inf];
+       return; 
+    end
+        
+    b = true;
+    d1 = pdist([p1;p2]);
+    d2 = pdist([p3;p4]);
+    
+    myEps = 1e-12;
+    
+    p = [px, py];
+    if (pdist([p;p1]) - d1 > myEps || pdist([p;p2]) - d1 > myEps || ...
+            pdist([p;p3]) - d2 > myEps || pdist([p;p4]) - d2 > myEps)
+        b = false;
+    end
 
 end
 
@@ -337,14 +455,16 @@ function [x, y] = computeIntersection(m1, b1, m2, b2)
 end
 
 %% Compute line %%%%%%%%%%%%
+
 function [m, b] = getLine(edge)
-    x1 = edge(1,1);
-    y1 = edge(1,2);
-    x2 = edge(1,3);
-    y2 = edge(1,4);
+    x1 = double(edge(1,1));
+    y1 = double(edge(1,2));
+    x2 = double(edge(1,3));
+    y2 = double(edge(1,4));
     
     dx = x1 - x2;
     
+    % if vertical, m = inf, b = x-intercept
     if (dx == 0)
         % vertical line
         m = inf;
@@ -352,9 +472,8 @@ function [m, b] = getLine(edge)
         
     else
         
-        m = (y1 - y2) / dx;
+        m = double((y1 - y2) / dx);
         b = y1 - m*x1;
     
     end
-    display(m);
 end
