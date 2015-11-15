@@ -1,5 +1,6 @@
 %  COMS W4733 Computational Aspects of Robotics 2015
 
+% TODO: get rid of one edge is outside wall
 function hw4_team_13(serPort, worldFile, sgFile) 
 
     robotDiameter = 0.35;
@@ -28,7 +29,7 @@ function hw4_team_13(serPort, worldFile, sgFile)
     generateVisibilityGraph(start, goal, grownObstacles, wall);
     
     for i = 1:size(grownObstacles, 2)
-        plotObject(grownObstacles{1,i}, 0, 0.8,1);  
+%         plotObject(grownObstacles{1,i}, 0, 0.8,1);  
     end
     %celldisp(grownObstacles);
 	%display(grownObstacles{1, 1});
@@ -296,9 +297,7 @@ function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
                         % can possibly make an edge! (both vertices are not
                         % inside an obstacle)
                         if (isInside2 == false)
-                            if (startgoal == true)
-                               display('trying to make an edge with obst!');
-                            end
+                            
                             temp_edge = [v1_x, v1_y, v2_x, v2_y];
                             
                             %check if this edge intersects any obstacles
@@ -326,10 +325,10 @@ function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
     end
     
 %     obst_edges = [];
-%     for i = 1:size(obstacles, 2)
-%         temp = getObstacleEdges(obstacles{1, i});
-%         obst_edges = vertcat(obst_edges, temp);
-%     end
+    for i = 1:size(obstacles_with_wall, 2)
+        temp = getObstacleEdges(obstacles_with_wall{1, i});
+        possible_paths = vertcat(possible_paths, temp);
+    end
 %     display(size(obst_edges,1));
     
     vgraph = [];
