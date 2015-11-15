@@ -274,7 +274,7 @@ function [vgraph, edges] = generateVisibilityGraph(start, goal, obstacles, wall)
                 end
                 
                 
-                for k = startIndex:numObstacles
+                for k = startIndex:size(obstacles_with_wall,2)
                     obst2 = obstacles_with_wall{1,k};
                     for l = 1:size(obst2, 1)
                         % each vertex in obstacle 2
