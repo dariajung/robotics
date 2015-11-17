@@ -55,7 +55,7 @@ function hw4_team_13(serPort, worldFile, sgFile)
     [adjacency_matrix, verticies] = vis2adjmat(vgraph, start);
     
     % find shortest path from start to goal
-    shortest_path = getShortestPath(start, goal, adjacency_matrix, verticies);
+    shortest_path = getShortestPath(start, goal, adjacency_matrix, verticies, robotDiameter);
     
     % roborace
     roborace(serPort, shortest_path);
@@ -522,7 +522,7 @@ end
 % [ first_x first_y ]
 % ....
 % [ goal_x goal_y ]
-function path = getShortestPath(start, goal, adjmat, verticies)
+function path = getShortestPath(start, goal, adjmat, verticies, robotDiameter)
     num_verticies = size(adjmat,1);
    
     % initialize matrix of distances from start to each vertex
@@ -577,10 +577,19 @@ function path = getShortestPath(start, goal, adjmat, verticies)
     
     display(path);
     
+    % shift points to the left and down to match grown obstacle algorithm
+    for i=1:size(path,1)
+
+        path(i,1) = path(i,1) - robotDiameter/2;
+        path(i,2) = path(i,2) - robotDiameter/2;
+        
+    end
+    
     % plot shortest path
     for i=1:size(path,1)-1
         display(path(i,1));
         line([path(i,1), path(i+1,1)], [path(i,2), path(i+1,2)], 'LineWidth', 1, 'Color', [1, 0, 0]);
+        
     end
 
     
