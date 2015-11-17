@@ -12,6 +12,11 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % TODO: get rid of one edge is outside wall
+% convex hull
+% extra credit: dealing with bumping objects early
+% test robot
+% cleanup code
+
 function hw4_team_13(serPort, worldFile, sgFile) 
 
     robotDiameter = 0.35;
@@ -346,14 +351,35 @@ function possible_paths = generateVisibilityGraph(start, goal, obstacles, wall)
         end
     end
     
-%     obst_edges = [];
     for i = 1:size(obstacles_with_wall, 2)
-        temp = getObstacleEdges(obstacles_with_wall{1, i});
-        possible_paths = vertcat(possible_paths, temp);
+        
+        obst_edges = getObstacleEdges(obstacles_with_wall{1, i});
+        
+        for j=1:size(obst_edges, 1)
+            temp_edge = obst_edges(j,:);
+                            
+            %check if this edge intersects any obstacles
+            interObst = false;
+            for n = 1:numObstacles
+                testObst = original_obstacles{1,n};
+                in = intersectObstacle(temp_edge, testObst);
+                if (in)
+                    interObst = true;
+                    break;
+                end
+            end
+
+            in = intersectObstacle(temp_edge, wall);
+
+            if (interObst == false && in == false)
+                % edge is safe!
+                possible_paths = vertcat(possible_paths, temp_edge);
+            end
+        end
+
     end
-%     display(size(obst_edges,1));
    
-    
+    % draw paths
     for i = 1:size(possible_paths, 1)
         temp_edge = possible_paths(i,:);
         line([temp_edge(1), temp_edge(3)], [temp_edge(2), temp_edge(4)], 'LineWidth', 1, 'Color', [0, 0, 0]);
