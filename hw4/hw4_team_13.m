@@ -39,9 +39,9 @@ function hw4_team_13(serPort, worldFile, sgFile)
    
     vgraph = generateVisibilityGraph(start, goal, grownObstacles, wall);
    
-%     for i = 1:size(grownObstacles, 2)
-%         plotObject(grownObstacles{1,i}, 0, 0.8,1);  
-%     end
+    for i = 1:size(obstacles, 2)
+        plotObject(obstacles{i}, 0, 0.8,1);
+    end
     %celldisp(grownObstacles);
 	%display(grownObstacles{1, 1});
     
@@ -52,11 +52,8 @@ function hw4_team_13(serPort, worldFile, sgFile)
     % find shortest path from start to goal
     shortest_path = getShortestPath(start, goal, adjacency_matrix, verticies);
     
-    
-    
-    
     % roborace
-%     roborace(serPort, shortest_path);
+    roborace(serPort, shortest_path);
     
 end
 
@@ -659,19 +656,55 @@ function roborace(serPort, path)
     currentX = start_coordinates(1);
     currentY = start_coordinates(2);
     
+    current_angle = 0;
+    
     display(currentX);
     display(currentY);
-       
+    
+    % reset distance and angle odometry
+    DistanceSensorRoomba(serPort);
+    AngleSensorRoomba(serPort);
+    
     % travel from start to goal
-    for i=1:(size(path,1)-1)
+    for i=2:(size(path,1))
+        next_x = path(i, 1);
+        next_y = path(i, 2);
+        
         % navigate to each vertex
         
-    end
-    
+        delta_x = (next_x - currentX);
+        delta_y = (next_y - currentY);
+        
+        theta = atan2(-delta_x, delta_y);
+        
+        display('----------------------> ');
+        display(180*theta/pi);
 
+        % turnAngle is in degrees
+        turnAngle(serPort, 0.2, (theta - current_angle) * 180 / pi);
+        current_angle = theta;
+        
+        distance = sqrt(delta_x^2 + delta_y^2);
+        dist_traveled = 0;
+        
+        % go straight
+        while (dist_traveled <= distance)
+            SetFwdVelAngVelCreate(serPort, 0.5, 0); % move forward
+            dist_traveled = dist_traveled + DistanceSensorRoomba(serPort);
+            pause(0.1);
+        end
+        
+        stopRobot(serPort);
+        
+        % reset to zero
+        dist_traveled = 0;
+        
+        currentX = next_x;
+        currentY = next_y;
+    end
 
     % reached goal
-    stopRobot();
+    stopRobot(serPort);
 end
 
 
@@ -697,6 +730,6 @@ function recordAngleTurn()
         currentA = currentA + AngleSensorRoomba(serPort);
 end
 
-function stopRobot()
+function stopRobot(serPort)
         SetFwdVelRadiusRoomba(serPort, 0, inf); % Stop the Robot
 end
