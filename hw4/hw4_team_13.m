@@ -192,7 +192,7 @@ function bigObstacle = growObstacle(obstacle, robotDiameter)
         tempMat(4*(i - 1) + 4, 2) = y;
     end
         
-    k = convhull(tempMat(:,1), tempMat(:,2), 'simplify', true);
+    k = convexHull(tempMat);
     
     bigObstacle = zeros(size(k, 1) - 1, 2);
     
@@ -200,6 +200,30 @@ function bigObstacle = growObstacle(obstacle, robotDiameter)
         bigObstacle(j,1) = tempMat(k(j),1);
         bigObstacle(j,2) = tempMat(k(j),2);
     end
+end
+
+function cvhull = convexHull(points)
+    cvhull = convhull(points(:,1), points(:,2), 'simplify', true);
+    
+    % minimum y
+    minY = points(points(:,2) == min(points(:,2)),:);
+    
+    % minimum y and min x (bottom left most point)
+    p0 = minY(minY(:,1) == min(minY(:,1)),:);
+    display(p0);
+    for i=1:size(points,1)
+       p = points(i,:);
+       if (~isequal(p,p0))
+          dx = p(1) - p0(1);
+          dy = p(2) - p0(2);
+          da = atan2(dy,dx);
+          display(180 * da/pi);
+       end
+        
+    end
+    
+
+
 end
 
 %% VISIBILITY GRAPH %%%%%
