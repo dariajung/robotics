@@ -280,8 +280,6 @@ function cvhull = convexHull(points)
             else
                 break;
             end
-           
-           display('while');
        end
        cvhull = vertcat(cvhull,r);
            
@@ -397,7 +395,7 @@ function possible_paths = generateVisibilityGraph(start, goal, obstacles, wall)
                     in = insideObstacle(v1_x, v1_y, original_obstacles{1,k});
                     if (in)
                         isInside = true;
-                        plot(v1_x, v1_y, '.r');
+%                         plot(v1_x, v1_y, '.r');
                         break;
                     end
                 end
@@ -425,7 +423,7 @@ function possible_paths = generateVisibilityGraph(start, goal, obstacles, wall)
                                 in = insideObstacle(v2_x, v2_y, original_obstacles{1,n});
                                 if (in)
                                     isInside2 = true;
-                                    plot(v2_x, v2_y, '.r');
+%                                     plot(v2_x, v2_y, '.r');
                                     
                                     break;
                                 end
@@ -560,15 +558,14 @@ function [p,b] = edgesIntersect(edge1, edge2)
     d1 = pdist([p1;p2]);
     d2 = pdist([p3;p4]);
     
-    myEps = 1e-12;
+    error = 1e-12;
     
     p = [px, py];
-    if (pdist([p;p1]) - d1 > myEps || pdist([p;p2]) - d1 > myEps || ...
-            pdist([p;p3]) - d2 > myEps || pdist([p;p4]) - d2 > myEps)
+    if (pdist([p;p1]) - d1 > error || pdist([p;p2]) - d1 > error || ...
+            pdist([p;p3]) - d2 > error || pdist([p;p4]) - d2 > error)
         b = false;
     end
  
-    
 %     b = false;
 %     if (px >= min([p3(1),p4(1)]) && px <= max([p3(1),p4(1)]))
 %        if (px >= min([p1(1),p2(1)]) && px <= max([p1(1),p2(1)]))
@@ -583,10 +580,6 @@ function [p,b] = edgesIntersect(edge1, edge2)
 %            end
 %        end
 %     end
-    
-    
-    
-    
 
 end
 
