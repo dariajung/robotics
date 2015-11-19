@@ -47,13 +47,18 @@ function hw4_team_13(serPort, worldFile, sgFile)
     end
     %celldisp(grownObstacles);
 	%display(grownObstacles{1, 1});
-    
-    
+
     % convert visgraph to adjacency matrix for dijkstra's
     [adjacency_matrix, verticies] = vis2adjmat(vgraph, start);
     
     % find shortest path from start to goal
     shortest_path = getShortestPath(start, goal, adjacency_matrix, verticies, robotDiameter);
+    
+    plot(start(1) - robotDiameter/2, start(2) - robotDiameter/2,...
+        'MarkerSize', 50, 'MarkerEdgeColor', 'magenta', 'Marker', '.');
+    
+    plot(goal(1) - robotDiameter/2, goal(2) - robotDiameter/2,...
+        'MarkerSize', 50, 'MarkerEdgeColor', 'green', 'Marker', '.');
     
     % roborace
 %     roborace(serPort, shortest_path);
@@ -205,6 +210,7 @@ function bigObstacle = growObstacle(obstacle, robotDiameter)
 
 end
 
+%% CONVEX HULL %%%%%%%
 function cvhull = convexHull(points)
 
     originalPoints = points;
@@ -294,8 +300,6 @@ function o = orientation(p,q,r)
     end
 end
 
-
-%% VISIBILITY GRAPH %%%%%
 function [obstacle_edges] = getObstacleEdges(obstacle)
 
     if size(obstacle, 1) == 1
@@ -328,6 +332,8 @@ function [obstacle_edges] = getObstacleEdges(obstacle)
     obstacle_edges(1, 3) = obstacle(1, 1);
     obstacle_edges(1, 4) = obstacle(1, 2);
 end
+
+%% VISIBILITY GRAPH %%%%%
 
 % possible_paths, every row is 1x4 x1,y1,x2,y2 represents edge
 function possible_paths = generateVisibilityGraph(start, goal, obstacles, wall)
@@ -651,7 +657,7 @@ function path = getShortestPath(start, goal, adjmat, verticies, robotDiameter)
     % finished tracing back to start (curr_idx is 1)
     path = vertcat(start, path);
     
-    display(path);
+%     display(path);
     
     % shift points to the left and down to match grown obstacle algorithm
     for i=1:size(path,1)
@@ -663,7 +669,7 @@ function path = getShortestPath(start, goal, adjmat, verticies, robotDiameter)
     
     % plot shortest path
     for i=1:size(path,1)-1
-        display(path(i,1));
+%         display(path(i,1));
         line([path(i,1), path(i+1,1)], [path(i,2), path(i+1,2)], 'LineWidth', 1, 'Color', [1, 0, 0]);
         
     end
