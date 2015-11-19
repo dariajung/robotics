@@ -11,11 +11,9 @@
 % Daria Jung (djj2115)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% TODO: get rid of one edge is outside wall
-% convex hull
-% extra credit: dealing with bumping objects early
-% test robot
-% cleanup code
+% HOW TO call function with obstacle files %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% hw4_team_13(1,'hw4_world_and_obstacles_convex.txt', 'hw4_start_goal.txt');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function hw4_team_13(serPort, worldFile, sgFile) 
 
@@ -58,7 +56,7 @@ function hw4_team_13(serPort, worldFile, sgFile)
     shortest_path = getShortestPath(start, goal, adjacency_matrix, verticies, robotDiameter);
     
     % roborace
-    roborace(serPort, shortest_path);
+%     roborace(serPort, shortest_path);
     
 end
 
@@ -216,7 +214,7 @@ function cvhull = convexHull(points)
     
     % minimum y and min x (bottom left most point)
     p0 = minY(minY(:,1) == min(minY(:,1)),:);
-    display(p0);
+%     display(p0);
     
     numP = size(points,1);
     points = horzcat(points, zeros(numP,2)); % add field for angle and distance
@@ -239,11 +237,11 @@ function cvhull = convexHull(points)
     points = sortrows(points,4);
     % sort by angle
     points = sortrows(points,3);
-    display(points);
+%     display(points);
     
     points = points(:,1:2);
     
-    display(points);
+%     display(points);
     
     % push p0,p1
     p = points(1,:);
@@ -253,22 +251,8 @@ function cvhull = convexHull(points)
     cvhull = vertcat(cvhull, q);
 
     for i=3:numP
-       r = points(i,:);
-       
-       % normalized vectors
-%        v1 = [p2(1) - p1(1), p2(2) - p1(2)];
-%        mv1 = sqrt(v1(1)^2 + v1(2)^2);
-%        v1(1) = v1(1) / mv1;
-%        v1(2) = v1(2) / mv1;
-%        
-%        v2 = [p3(1) - p2(1), p3(2) - p2(2)];
-%        mv2 = sqrt(v2(1)^2 + v2(2)^2);
-%        v2(1) = v2(1) / mv2;
-%        v2(2) = v2(2) / mv2;
-%        
-%        va = atan2(v2(2), v2(1)) - atan2(v1(2),v1(1));
-%        display([p1(1),p1(2),p2(1),p2(2),p3(1),p3(2),180 - 180 * va/pi]);
-       
+        r = points(i,:);
+     
         while (orientation(p,q,r) ~= 2)
 
            
@@ -565,22 +549,6 @@ function [p,b] = edgesIntersect(edge1, edge2)
             pdist([p;p3]) - d2 > error || pdist([p;p4]) - d2 > error)
         b = false;
     end
- 
-%     b = false;
-%     if (px >= min([p3(1),p4(1)]) && px <= max([p3(1),p4(1)]))
-%        if (px >= min([p1(1),p2(1)]) && px <= max([p1(1),p2(1)]))
-%            
-%            if (py >= min([p3(2),p4(2)]) && py <= max([p3(2),p4(2)]))
-%                
-%                if (py >= min([p1(2),p2(2)]) && py <= max([p1(2),p2(2)]))
-%                    
-%                    b = true;
-%                    
-%                end   
-%            end
-%        end
-%     end
-
 end
 
 %% Point of Intersection %%%%%%%%%%%%
