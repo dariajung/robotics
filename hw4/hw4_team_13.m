@@ -192,39 +192,126 @@ function bigObstacle = growObstacle(obstacle, robotDiameter)
         tempMat(4*(i - 1) + 4, 2) = y;
     end
         
-    k = convexHull(tempMat);
-    
-    bigObstacle = zeros(size(k, 1) - 1, 2);
-    
-    for j = 1:size(bigObstacle)
-        bigObstacle(j,1) = tempMat(k(j),1);
-        bigObstacle(j,2) = tempMat(k(j),2);
-    end
+%     k = convexHull(tempMat);
+%     
+%     bigObstacle = zeros(size(k, 1) - 1, 2);
+%     
+%     for j = 1:size(bigObstacle)
+%         bigObstacle(j,1) = tempMat(k(j),1);
+%         bigObstacle(j,2) = tempMat(k(j),2);
+%     end
+% %     display('bigobst');
+% %     display(bigObstacle);
+
+    bigObstacle = convexHull(tempMat);
+
 end
 
 function cvhull = convexHull(points)
-    cvhull = convhull(points(:,1), points(:,2), 'simplify', true);
+
+    originalPoints = points;
     
-    % minimum y
+    % points with minimum y
     minY = points(points(:,2) == min(points(:,2)),:);
     
     % minimum y and min x (bottom left most point)
     p0 = minY(minY(:,1) == min(minY(:,1)),:);
     display(p0);
-    for i=1:size(points,1)
-       p = points(i,:);
-       if (~isequal(p,p0))
-          dx = p(1) - p0(1);
-          dy = p(2) - p0(2);
+    
+    numP = size(points,1);
+    points = horzcat(points, zeros(numP,2)); % add field for angle and distance
+    for i=1:numP
+       px = points(i,1);
+       py = points(i,2);
+       if (~isequal(p0,[px,py]))
+          dx = px - p0(1);
+          dy = py - p0(2);
           da = atan2(dy,dx);
-          display(180 * da/pi);
+          
+          points(i,3) = 180 * da/pi;
+          points(i,4) = sqrt(dx^2 + dy^2);
+          
        end
         
     end
     
+    % sort by distance
+    points = sortrows(points,4);
+    % sort by angle
+    points = sortrows(points,3);
+    display(points);
+    
+    points = points(:,1:2);
+    
+    display(points);
+    
+    % push p0,p1
+    p = points(1,:);
+    q = points(2,:);
 
+    cvhull = p;
+    cvhull = vertcat(cvhull, q);
 
+    for i=3:numP
+       r = points(i,:);
+       
+       % normalized vectors
+%        v1 = [p2(1) - p1(1), p2(2) - p1(2)];
+%        mv1 = sqrt(v1(1)^2 + v1(2)^2);
+%        v1(1) = v1(1) / mv1;
+%        v1(2) = v1(2) / mv1;
+%        
+%        v2 = [p3(1) - p2(1), p3(2) - p2(2)];
+%        mv2 = sqrt(v2(1)^2 + v2(2)^2);
+%        v2(1) = v2(1) / mv2;
+%        v2(2) = v2(2) / mv2;
+%        
+%        va = atan2(v2(2), v2(1)) - atan2(v1(2),v1(1));
+%        display([p1(1),p1(2),p2(1),p2(2),p3(1),p3(2),180 - 180 * va/pi]);
+       
+        while (orientation(p,q,r) ~= 2)
+
+           
+            cvhull = cvhull(1:size(cvhull,1)-1,:);
+           
+            if (size(cvhull,1) > 1)
+                q = cvhull(size(cvhull,1),:);
+                p = cvhull(size(cvhull,1)-1,:);
+            else
+                break;
+            end
+           
+           display('while');
+       end
+       cvhull = vertcat(cvhull,r);
+           
+       p = q;
+       q = r;
+        
+    end
+
+%     display(points);
+%     display(originalPoints);
+%     cvhull2 = cvhull;
+%     cvhull = convhull(originalPoints(:,1), originalPoints(:,2), 'simplify', true);
+    
 end
+
+function o = orientation(p,q,r)
+
+%     display([p,q,r]);
+    val = (q(2) - p(2)) * (r(1) - q(1)) - (q(1) - p(1)) * (r(2) - q(2));
+    
+    %display(val);
+    if (val == 0)
+        o = 0;
+    elseif(val > 0)
+        o = 1;
+    else
+        o = 2;
+    end
+end
+
 
 %% VISIBILITY GRAPH %%%%%
 function [obstacle_edges] = getObstacleEdges(obstacle)
@@ -280,7 +367,6 @@ function possible_paths = generateVisibilityGraph(start, goal, obstacles, wall)
     % go through all obstacles (minus wall, start, goal)
     numObstacles = size(original_obstacles, 2);
     for i = -1:size(obstacles_with_wall, 2)
-    %for i = -1:0    
         startgoal = true;
         if (i == -1)
             obst1 = start;
@@ -375,9 +461,14 @@ function possible_paths = generateVisibilityGraph(start, goal, obstacles, wall)
         end
     end
     
-    for i = 1:size(obstacles_with_wall, 2)
+    % adding in obstacle walls
+    for i = 0:size(obstacles_with_wall, 2)
         
-        obst_edges = getObstacleEdges(obstacles_with_wall{1, i});
+        if (i == 0)
+            obst_edges = [start(1),start(2),goal(1),goal(2)];
+        else
+            obst_edges = getObstacleEdges(obstacles_with_wall{1, i});
+        end
         
         for j=1:size(obst_edges, 1)
             temp_edge = obst_edges(j,:);
@@ -779,10 +870,10 @@ function recordRobotTravel(gridColor, robotOffset)
 
       distance = DistanceSensorRoomba(serPort);
 
-      currentX = currentX + distance * cos(currentA);
-      currentY = currentY + distance * sin(currentA);
-
-      updateGrid(currentX,currentY,gridColor, robotOffset, false);
+%       currentX = currentX + distance * cos(currentA);
+%       currentY = currentY + distance * sin(currentA);
+% 
+%       updateGrid(currentX,currentY,gridColor, robotOffset, false);
 end
 
 function recordAngleTurn()
