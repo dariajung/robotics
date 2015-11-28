@@ -12,18 +12,25 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % HOW TO call function with obstacle files %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% hw5_team_13(1,'hw4_world_and_obstacles_convex.txt', 'hw4_start_goal.txt');
+% hw5_team_13(1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function hw5_team_13(serPort) 
+function hw5_team_13(serPort)
+
+    % reset distance and angle odometry
+    DistanceSensorRoomba(serPort);
+    AngleSensorRoomba(serPort);
     
-    % read image from linksys camera
+    robocam = figure();
+    
+    % read initial image from linksys camera
     img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
+    
+    % image center, to center target
+    img_center_x = size(img_rgb,2);
     
     % convert to hsv
     img_hsv = rgb2hsv(img_rgb);
-    
-    robocam = figure();
 %     imshow(img_hsv(:,:,1));
 %     colormap('hsv')
 %     colorbar;
@@ -41,7 +48,12 @@ function hw5_team_13(serPort)
         img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
         [x,y,area] = getTarget(img_rgb, target_color, 0.03);
 
-        display([x,y,area]);
+        if (x > img_center_x)
+            turnAngle(serPort, 0.2, -1);
+        elseif (x < img_center_x)
+            turnAngle(serPort, 0.2, 1);
+        end
+%         display([x,y,area]);
         
     end
 
@@ -85,67 +97,16 @@ function [x,y,area] = getTarget(img_rgb, hue, range)
 end
 
 %% ROBORACE %%%%%%%%%%%
-
 function roborace(serPort, path)
-    display(path);
     
-    
-    
-    
-    start_coordinates = path(1,:);
-    goal_coordinates = path(size(path,1),:);
-    
-    currentX = start_coordinates(1);
-    currentY = start_coordinates(2);
-    
-    current_angle = 0;
-    
-    display(currentX);
-    display(currentY);
-    
-    % reset distance and angle odometry
-    DistanceSensorRoomba(serPort);
-    AngleSensorRoomba(serPort);
-    
-    % travel from start to goal
-    for i=2:(size(path,1))
-        next_x = path(i, 1);
-        next_y = path(i, 2);
-        
-        % navigate to each vertex
-        
-        delta_x = (next_x - currentX);
-        delta_y = (next_y - currentY);
-        
-        theta = atan2(-delta_x, delta_y);
-        
-        display('----------------------> ');
-        display(180*theta/pi);
-
-        % turnAngle is in degrees
-        turnAngle(serPort, 0.2, (theta - current_angle) * 180 / pi);
-        current_angle = theta;
-        
-        distance = sqrt(delta_x^2 + delta_y^2);
-        dist_traveled = 0;
-        
-        % go straight
-        while (dist_traveled <= distance)
-            SetFwdVelAngVelCreate(serPort, 0.5, 0); % move forward
-            dist_traveled = dist_traveled + DistanceSensorRoomba(serPort);
-            pause(0.1);
-        end
-        
-        stopRobot(serPort);
-        
-        currentX = next_x;
-        currentY = next_y;
+    % go straight
+    while (dist_traveled <= distance)
+        SetFwdVelAngVelCreate(serPort, 0.5, 0); % move forward
+        dist_traveled = dist_traveled + DistanceSensorRoomba(serPort);
+        pause(0.1);
     end
-
-    % reached goal
-    stopRobot(serPort);
+    
 end
-
 function stopRobot(serPort)
         SetFwdVelAngVelCreate(serPort, 0, 0); % Stop the Robot
 end
