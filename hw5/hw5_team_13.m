@@ -27,7 +27,7 @@ function hw5_team_13(serPort)
     img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
     
     % image center, to center target
-    img_center_x = size(img_rgb,2);
+    camera_x = size(img_rgb,2)/2;
     
     % convert to hsv
     img_hsv = rgb2hsv(img_rgb);
@@ -46,14 +46,18 @@ function hw5_team_13(serPort)
     while(1)
         % read image from linksys camera
         img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
-        [x,y,area] = getTarget(img_rgb, target_color, 0.03);
-
-        if (x > img_center_x)
+        [obj_x,obj_y,area] = getTarget(img_rgb, target_color, 0.03);
+        
+        display('camera_x, obj_x ----->');
+        display([camera_x, obj_x]);
+        
+        if (obj_x > camera_x)
+            display('turning right');
             turnAngle(serPort, 0.2, -1);
-        elseif (x < img_center_x)
+        elseif (obj_x < camera_x)
+            display('turning left');
             turnAngle(serPort, 0.2, 1);
         end
-%         display([x,y,area]);
         
     end
 
@@ -88,11 +92,16 @@ function [x,y,area] = getTarget(img_rgb, hue, range)
         end
     end
     
-    x = round(stats(largest_i).Centroid(1));
-    y = round(stats(largest_i).Centroid(2));
+    x = floor(stats(largest_i).Centroid(1)) + 1;
+    y = floor(stats(largest_i).Centroid(2)) + 1;
     area = round(stats(largest_i).Area);
     
-    imshow(img_thresh);
+    display('-----------------');
+    display([x, y, area]);
+    display('-----------------');
+    
+    img_rgb(y-10:y+10,x-10:x+10,1) = 255;
+    imshow(img_rgb);
 
 end
 
