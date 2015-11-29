@@ -51,10 +51,11 @@ function hw5_team_13(serPort)
         display('camera_x, obj_x ----->');
         display([camera_x, obj_x]);
         
-        if (obj_x > camera_x)
+        % error range of 20 pixels where the camera doesn't need to turn
+        if (obj_x > camera_x + 10)
             display('turning right');
             turnAngle(serPort, 0.2, -1);
-        elseif (obj_x < camera_x)
+        elseif (obj_x < camera_x - 10)
             display('turning left');
             turnAngle(serPort, 0.2, 1);
         end
@@ -91,6 +92,8 @@ function [x,y,area] = getTarget(img_rgb, hue, range)
             largest_i = i;
         end
     end
+    
+    display(largest_i);
     
     x = floor(stats(largest_i).Centroid(1)) + 1;
     y = floor(stats(largest_i).Centroid(2)) + 1;
