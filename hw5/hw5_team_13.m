@@ -42,6 +42,8 @@ function hw5_team_13(serPort)
     y = round(y);
     target_color = img_hsv(y,x,:); % Hue to follow
     
+    [obj_x,obj_y,obj_area] = getTarget(img_rgb, target_color, 0.03, 0.5);
+    
     % robot follow target
     while(1)
         % read image from linksys camera
@@ -57,14 +59,33 @@ function hw5_team_13(serPort)
         end
         
         % error range of 20 pixels where the camera doesn't need to turn
-        if (obj_x > camera_x + 10)
+        if (obj_x > camera_x + 25)
             display('turning right');
-            turnAngle(serPort, 0.2, -1);
-        elseif (obj_x < camera_x - 10)
+            SetFwdVelAngVelCreate(serPort, 0, -0.2);
+            pause(0.005);
+            % turnAngle(serPort, 0.2, -1);
+        elseif (obj_x < camera_x - 25)
             display('turning left');
-            turnAngle(serPort, 0.2, 1);
-        end
+            SetFwdVelAngVelCreate(serPort, 0, 0.2);
+            pause(0.005);
+            % turnAngle(serPort, 0.2, 1);
+        else 
+            display('stopping roomba turn');
+            
+            
+            if (area < obj_area - 250)
+                % move forward
+                SetFwdVelAngVelCreate(serPort, 0.05, 0);
+                pause(0.005);
+            elseif (area > obj_area + 250)
+                % move backward
+                SetFwdVelAngVelCreate(serPort, -0.05, 0);
+                pause(0.005);
+            else
+                SetFwdVelAngVelCreate(serPort, 0, 0);
+            end
         
+        end
     end
 
 end
