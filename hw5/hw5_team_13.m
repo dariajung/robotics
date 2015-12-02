@@ -40,16 +40,21 @@ function hw5_team_13(serPort)
     [x,y] = ginput(1);
     x = round(x);
     y = round(y);
-    target_color = img_hsv(y,x,1); % Hue to follow
+    target_color = img_hsv(y,x,:); % Hue to follow
     
     % robot follow target
     while(1)
         % read image from linksys camera
         img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
-        [obj_x,obj_y,area] = getTarget(img_rgb, target_color, 0.03);
+        [obj_x,obj_y,area] = getTarget(img_rgb, target_color, 0.03, 0.5);
         
         display('camera_x, obj_x ----->');
         display([camera_x, obj_x]);
+        
+        % no object found in frame
+        if (area < 0)
+            continue;
+        end
         
         % error range of 20 pixels where the camera doesn't need to turn
         if (obj_x > camera_x + 10)
@@ -65,22 +70,41 @@ function hw5_team_13(serPort)
 end
 
 %%% get centroid and area of colored target object in a new captured image
-function [x,y,area] = getTarget(img_rgb, hue, range)
+function [x,y,area] = getTarget(img_rgb, target_color, rangeH, rangeS)
 
     % convert to hsv
     img_hsv = rgb2hsv(img_rgb);
     
     % threshold image based on hue
-    img_thresh = img_hsv(:,:,1) > hue - range &...
-        img_hsv(:,:,1) < hue + range;
+    img_thresh_H = img_hsv(:,:,1) > target_color(1,1) - rangeH &...
+        img_hsv(:,:,1) < target_color(1) + rangeH;
+    
+    % threshold image based on saturation
+    img_thresh_S = img_hsv(:,:,2) > target_color(1,2) - rangeS &...
+        img_hsv(:,:,2) < target_color(2) + rangeS;
+    
+    img_thresh = img_thresh_H & img_thresh_S;
     
     % dilate and erode to remove noise
     img_thresh = bwmorph(img_thresh, 'erode', 5);
     img_thresh = bwmorph(img_thresh, 'dilate', 8);
     img_thresh = bwmorph(img_thresh, 'erode', 3);
     
+    imshowpair(img_rgb, img_thresh, 'montage');
+    
     % create labeled image to find largest object as target
     [labeled_img, n] = bwlabel(img_thresh);
+    
+    display('number of objects:::::');
+    display(n);
+    if (n < 1)
+        x = -1;
+        y = -1;
+        area = -1;
+        return;
+    end
+    
+    
     
     % get area and centroids of objects/blobs
     stats = regionprops(labeled_img, 'Area', 'Centroid');
@@ -93,6 +117,7 @@ function [x,y,area] = getTarget(img_rgb, hue, range)
         end
     end
     
+    display(size(stats,1));
     display(largest_i);
     
     x = floor(stats(largest_i).Centroid(1)) + 1;
@@ -103,22 +128,30 @@ function [x,y,area] = getTarget(img_rgb, hue, range)
     display([x, y, area]);
     display('-----------------');
     
-    img_rgb(y-10:y+10,x-10:x+10,1) = 255;
-    imshow(img_rgb);
-
-end
-
-%% ROBORACE %%%%%%%%%%%
-function roborace(serPort, path)
-    
-    % go straight
-    while (dist_traveled <= distance)
-        SetFwdVelAngVelCreate(serPort, 0.5, 0); % move forward
-        dist_traveled = dist_traveled + DistanceSensorRoomba(serPort);
-        pause(0.1);
+    % draw a square at target center
+    redTrackerY1 = y - 10;
+    if (redTrackerY1 < 1)
+        redTrackerY1 = 1;
+    end
+    redTrackerY2 = y + 10;
+    if (redTrackerY2 > size(img_rgb, 1))
+        redTrackerY2 = size(img_rgb, 1);
     end
     
+    redTrackerX1 = x - 10;
+    if (redTrackerX1 < 1)
+        redTrackerX1 = 1;
+    end
+    redTrackerX2 = x + 10;
+    if (redTrackerX2 > size(img_rgb, 2))
+        redTrackerX2 = size(img_rgb, 2);
+    end
+    
+    img_rgb(redTrackerY1:redTrackerY2,redTrackerX1:redTrackerX2,1) = 255;
+
+    
+    imshowpair(img_rgb, img_thresh, 'montage');
+
 end
-function stopRobot(serPort)
-        SetFwdVelAngVelCreate(serPort, 0, 0); % Stop the Robot
-end
+
+
