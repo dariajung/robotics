@@ -58,30 +58,31 @@ function hw5_team_13(serPort)
             continue;
         end
         
-        % error range of 20 pixels where the camera doesn't need to turn
-        if (obj_x > camera_x + 25)
+        % error range of 25 pixels where the camera doesn't need to turn
+        if (obj_x > camera_x + 30)
             display('turning right');
-            SetFwdVelAngVelCreate(serPort, 0, -0.2);
+            SetFwdVelAngVelCreate(serPort, 0, -0.1);
             pause(0.005);
             % turnAngle(serPort, 0.2, -1);
-        elseif (obj_x < camera_x - 25)
+        elseif (obj_x < camera_x - 30)
             display('turning left');
-            SetFwdVelAngVelCreate(serPort, 0, 0.2);
+            SetFwdVelAngVelCreate(serPort, 0, 0.1);
             pause(0.005);
             % turnAngle(serPort, 0.2, 1);
         else 
             display('stopping roomba turn');
             
             
-            if (area < obj_area - 250)
+            if (area < obj_area - 300)
                 % move forward
                 SetFwdVelAngVelCreate(serPort, 0.05, 0);
                 pause(0.005);
-            elseif (area > obj_area + 250)
+            elseif (area > obj_area + 300)
                 % move backward
                 SetFwdVelAngVelCreate(serPort, -0.05, 0);
                 pause(0.005);
             else
+                display('stop robot if out of frame');
                 SetFwdVelAngVelCreate(serPort, 0, 0);
             end
         
