@@ -250,7 +250,7 @@ function [found_door, direction] = moveRobotToDoorEdge(serPort, img_rgb, target_
     display([obj_r_x, obj_r_y, r_area]);
     display([obj_l_x, obj_l_y, l_area]);
     
-    imshow(right);
+    imshowpair(left, right, 'montage');
     
     rect_area = 20 * num_rows;
     display(rect_area);
