@@ -42,49 +42,52 @@ function hw5_team_13(serPort)
     y = round(y);
     target_color = img_hsv(y,x,:); % Hue to follow
     
-    [obj_x,obj_y,obj_area] = getTarget(img_rgb, target_color, 0.03, 0.5);
+    [~,~,obj_area] = getTarget(img_rgb, target_color, 0.03, 0.5);
     
+    robot_turn = 0;
     % robot follow target
     while(1)
         % read image from linksys camera
         img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
-        [obj_x,obj_y,area] = getTarget(img_rgb, target_color, 0.03, 0.5);
+        [obj_x,~,area] = getTarget(img_rgb, target_color, 0.03, 0.5);
         
-        display('camera_x, obj_x ----->');
-        display([camera_x, obj_x]);
+        display('camera_x, obj_x, obj_area, current_area ----->');
+        display([camera_x, obj_x, obj_area, area]);
+        
         
         % no object found in frame
         if (area < 0)
-            continue;
+            % continue;
+            SetFwdVelAngVelCreate(serPort, 0, robot_turn);
         end
         
         % error range of 25 pixels where the camera doesn't need to turn
-        if (obj_x > camera_x + 30)
+        if (obj_x > camera_x + 25)
             display('turning right');
+            robot_turn = -0.1;
             SetFwdVelAngVelCreate(serPort, 0, -0.1);
             pause(0.005);
             % turnAngle(serPort, 0.2, -1);
-        elseif (obj_x < camera_x - 30)
+        elseif (obj_x < camera_x - 25)
             display('turning left');
+            robot_turn = 0.1;
             SetFwdVelAngVelCreate(serPort, 0, 0.1);
             pause(0.005);
             % turnAngle(serPort, 0.2, 1);
         else 
             display('stopping roomba turn');
-            
-            
-            if (area < obj_area - 300)
+
+            if (area < obj_area - 290)
                 % move forward
                 SetFwdVelAngVelCreate(serPort, 0.05, 0);
-                pause(0.005);
-            elseif (area > obj_area + 300)
+            elseif (area > obj_area + 290)
                 % move backward
                 SetFwdVelAngVelCreate(serPort, -0.05, 0);
-                pause(0.005);
             else
                 display('stop robot if out of frame');
                 SetFwdVelAngVelCreate(serPort, 0, 0);
             end
+            pause(0.005);
         
         end
     end
