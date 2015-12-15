@@ -15,7 +15,7 @@
 % hw5_team_13_b(serPort)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function hw5_team_13_b(serPort)
+function hw5_doortracker_team_13(serPort)
 
     hall = 0;
 %     hall = -1; %small hall

@@ -15,7 +15,7 @@
 % hw5_team_13(1);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-function hw5_team_13(serPort)
+function hw5_colortracker_team_13(serPort)
 
     % reset distance and angle odometry
     DistanceSensorRoomba(serPort);
@@ -173,10 +173,7 @@ function [x,y,area] = getTarget(img_rgb, target_color, rangeH, rangeS)
     end
     
     img_rgb(redTrackerY1:redTrackerY2,redTrackerX1:redTrackerX2,1) = 255;
-
     
     imshowpair(img_rgb, img_thresh, 'montage');
 
 end
-
-
