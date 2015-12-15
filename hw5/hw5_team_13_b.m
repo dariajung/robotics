@@ -12,43 +12,36 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % HOW TO call function with obstacle files %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% hw5_team_13(1);
+% hw5_team_13_b(serPort)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 function hw5_team_13_b(serPort)
 
+    hall = 0;
+%     hall = -1; %small hall
+%     hall = 0.5; %big hall
+    
     % reset distance and angle odometry
     DistanceSensorRoomba(serPort);
     AngleSensorRoomba(serPort);
     
     % read image from linksys camera
     img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
-    img_size = size(img_rgb, 1) * size(img_rgb, 2);
-        
-    obj_x = 1;
-    obj_y = 1;
-    camera_x = size(img_rgb,2)/2;
-    
-    robocam = figure();
     
     state = 0; % finding door color
     
-    img_hsv = rgb2hsv(img_rgb);
+% manually choose color    
+%     img_hsv = rgb2hsv(img_rgb); 
+%     imshow(img_rgb);
+%     [x,y] = ginput(1);
+%     x = round(x);
+%     y = round(y);
+%     doorColor = img_hsv(y, x, :);
     
-    imshow(img_rgb);
-    [x,y] = ginput(1);
-    x = round(x);
-    y = round(y);
-    
-    doorColor = img_hsv(y, x, :);
-    
+    % blue door color
+    doorColor = [0.5965,0.2851];
     display(doorColor);
     
-%     [obj_x, obj_y, area] = getTarget(img_rgb, doorColor, 0.05, 0.5);
-%     
-%     display([obj_x, obj_y, area]);
-    % moveTowardDoor(area, serPort);
-    % moveRobotToDoorEdge(serPort, img_rgb, target_color)
     direction = -1;
     
     prev_area = 0;
@@ -68,23 +61,44 @@ function hw5_team_13_b(serPort)
                 continue;
             else
                 % make it go straight
-                SetFwdVelAngVelCreate(serPort, .1, 0);
+                SetFwdVelAngVelCreate(serPort, .07, 0);
             end
-            
-            %state = 1;
-            %continue;
         end
         
         % Moving towards door
         if (state == 1)
-            [obj_x, obj_y, area] = getTarget(img_rgb, doorColor, 0.05, 0.5);
-            moveTowardDoor(area, serPort);
+            
+            % take the average of 4 readings
+            img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
+            [~, ~, area1] = getTarget(img_rgb, doorColor, 0.05, 0.5);
+            pause(0.05);
+            
+            img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
+            [~, ~, area2] = getTarget(img_rgb, doorColor, 0.05, 0.5);
+            pause(0.05);
+            
+            img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
+            [~, ~, area3] = getTarget(img_rgb, doorColor, 0.05, 0.5);
+            pause(0.05);
+            
+            img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
+            [~, ~, area4] = getTarget(img_rgb, doorColor, 0.05, 0.5);
+            pause(0.05);
+            
+            area = (area1 + area2 + area3 + area4) / 4;
+            
+            display('average of 4 readings: ');
+            display([area1, area2, area3, area4, area]);
+            moveTowardDoor(area, serPort, hall);
             if (direction == 0)
                 turnAngle(serPort, 0.2, 90);
             else
                 turnAngle(serPort, 0.2, -90);
             end
+            
             state = 2;
+            
+%             state = 5;
         end
         
         if (state == 2)
@@ -120,114 +134,51 @@ function hw5_team_13_b(serPort)
         if (state == 4)
             img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
             
-            [o_x, ~, cur_area] = getTarget(img_rgb, doorColor, 0.05, 0.5);
+            [~, ~, cur_area] = getTarget(img_rgb, doorColor, 0.05, 0.5);
             
             % check where center of door is, and compare it to camera center? o_x < camera_x
+            display('prev_area, cur_area -------------------');
+            display([prev_area, cur_area]);
             if (prev_area > cur_area + 900)
+                
                 travelDist(serPort, 0.3, 1);
                 state = 5;
+            else
+                display('waiting for door to open');
             end
             
         end
         
         if (state == 5)
+            display('finished');
             break;
         end
         
-%        % Moving towards door
-%         if (state == 1)
-%             
-%             [BumpRight, BumpLeft, ~, ~, ~, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
-%             bumped = BumpRight || BumpLeft || BumpFront;
-%             
-%             % if any bump sensor is 1, then the robot has reached door
-%             % go to state two
-%             if (bumped)
-%                 state = 2;
-%                 SetFwdVelAngVelCreate(serPort, 0, 0);
-%                 continue;
-%             end
-%             
-%              % read image from linksys camera
-%             img_rgb = im2double(imread('http://192.168.0.101/img/snapshot.cgi?'));
-%             [obj_x,obj_y,area] = getTarget(img_rgb, target_color, 0.03, 0.5);
-% 
-%             display('camera_x, obj_x ----->');
-%             display([camera_x, obj_x]);
-% 
-%             % no object found in frame
-%             if (area < 0)
-%                 continue;
-%             end
-% 
-%             % error range of 20 pixels where the camera doesn't need to turn
-%             if (obj_x > camera_x + 25)
-%                 display('turning right');
-%                 SetFwdVelAngVelCreate(serPort, 0, -0.2);
-%                 pause(0.005);
-%                 % turnAngle(serPort, 0.2, -1);
-%             elseif (obj_x < camera_x - 25)
-%                 display('turning left');
-%                 SetFwdVelAngVelCreate(serPort, 0, 0.2);
-%                 pause(0.005);
-%                 % turnAngle(serPort, 0.2, 1);
-%             else 
-%                 display('stopping roomba turn');
-% 
-%                 if (area < img_size - 200)
-%                     % move forward
-%                     SetFwdVelAngVelCreate(serPort, 0.05, 0);
-%                     pause(0.005);
-%                 else
-%                     SetFwdVelAngVelCreate(serPort, 0, 0);
-%                 end
-% 
-%             end
-%         end
-%         
-%         % orienting towards door
-%         if (state == 2)
-%             % move until front-bump sensor 
-%             [BumpRight, BumpLeft, ~, ~, ~, BumpFront] = BumpsWheelDropsSensorsRoomba(serPort);
-%             
-%             display('BUMP --------------------->');
-%             display([BumpRight, BumpLeft, BumpFront]);
-%             
-%             %
-%             if (BumpFront == 1) 
-%                 state = 3;
-%                 % SetFwdVelAngVelCreate(serPort, 0, 0);
-%                 continue;
-%             elseif (BumpRight == 1) 
-%                 turnAngle(serPort, 0.1, -5);
-%             elseif (BumpLeft == 1)
-%                 turnAngle(serPort, 0.1, 5);
-%             end
-% 
-%         end
-%         
-%         if (state == 3)
-%             display('yay made it to state 3! ------------------------');
-%         end
-
-       
     end
 
 end
 
-function moveTowardDoor(area, serPort)
-    m = -0.0006;
-    b = 12.46;
+function moveTowardDoor(area, serPort, hall)
+    
+    m = -0.0009;
+%     b = 11.539;
+    
+    b = 12.5;   
+    b = b + hall;
     
     % distance is number of tiles
     num_tiles = area * m + b;
     
-    tile_m = 0.305;
+    tile_m = 0.324612 * num_tiles;
     
     % each tile is about 0.305 meters
+    display('<-------tell robot to move this far ---------------------->');
     
-    travelDist(serPort, 0.2, tile_m * num_tiles);
+    display([area, num_tiles, tile_m]);
+%     tile_m = 2.342;
     
+    travelDist(serPort, 0.2, tile_m);
+
 end
 
 % move until right or left edge is the target blue
@@ -235,14 +186,16 @@ function [found_door, direction] = moveRobotToDoorEdge(serPort, img_rgb, target_
     found_door = false;
     direction = -1;
 
+    door_detect_win = 20;
+    
     % left or right based on if 
     num_cols = size(img_rgb, 2); % 320
     num_rows = size(img_rgb, 1); % 240
     display(num_cols)
     display(num_rows)
     
-    right = img_rgb(:,num_cols - 20:num_cols, :);
-    left = img_rgb(:,1:20, :);
+    right = img_rgb(:,num_cols - door_detect_win:num_cols, :);
+    left = img_rgb(:,1:door_detect_win, :);
     
     [obj_r_x, obj_r_y, r_area] = getTarget(right, target_color, 0.05, 0.5);
     [obj_l_x, obj_l_y, l_area] = getTarget(left, target_color, 0.05, 0.5);
@@ -252,7 +205,7 @@ function [found_door, direction] = moveRobotToDoorEdge(serPort, img_rgb, target_
     
     imshowpair(left, right, 'montage');
     
-    rect_area = 20 * num_rows;
+    rect_area = 15 * num_rows;
     display(rect_area);
     
     display(target_color);
@@ -286,8 +239,8 @@ function [x,y,area] = getTarget(img_rgb, target_color, rangeH, rangeS)
     
     % dilate and erode to remove noise
     img_thresh = bwmorph(img_thresh, 'erode', 5);
-    img_thresh = bwmorph(img_thresh, 'dilate', 8);
-    img_thresh = bwmorph(img_thresh, 'erode', 3);
+    img_thresh = bwmorph(img_thresh, 'dilate', 4);
+%     img_thresh = bwmorph(img_thresh, 'erode', 3);
     
     imshowpair(img_rgb, img_thresh, 'montage');
     
@@ -351,5 +304,3 @@ function [x,y,area] = getTarget(img_rgb, target_color, rangeH, rangeS)
     imshowpair(img_rgb, img_thresh, 'montage');
 
 end
-
-
